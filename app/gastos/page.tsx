@@ -308,12 +308,17 @@ export default function GastosPage() {
 
   if (loading) {
     return (
-      <DashboardLayout title="Gestión de Gastos">
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-gray-200 border-t-[#0A2640] rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-500">Cargando gastos...</p>
+      <DashboardLayout title="">
+        <div className="p-6 md:p-8 space-y-4">
+          <div className="skeleton h-32 rounded-2xl" />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="skeleton h-24 rounded-2xl" />
+            <div className="skeleton h-24 rounded-2xl" />
+            <div className="skeleton h-24 rounded-2xl" />
           </div>
+          <div className="skeleton h-14 rounded-2xl" />
+          <div className="skeleton h-28 rounded-2xl" />
+          <div className="skeleton h-28 rounded-2xl" />
         </div>
       </DashboardLayout>
     );
@@ -321,17 +326,20 @@ export default function GastosPage() {
 
   if (locales.length === 0) {
     return (
-      <DashboardLayout title="Gestión de Gastos">
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center max-w-md">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-              <Lightbulb className="w-16 h-16 text-[#0A2640] mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">No hay locales</h2>
-              <p className="text-gray-500 mb-6">Necesitas inicializar los locales antes de registrar gastos.</p>
-              <button onClick={inicializarLocales} className="px-6 py-3 bg-[#0A2640] hover:bg-[#0A2640]/90 text-white rounded-lg transition-all font-semibold">
-                Inicializar Locales
-              </button>
+      <DashboardLayout title="">
+        <div className="flex items-center justify-center h-full p-8">
+          <div className="text-center max-w-sm animate-scale-in">
+            <div className="w-20 h-20 bg-[#0A2640]/5 rounded-3xl flex items-center justify-center mx-auto mb-5">
+              <Lightbulb className="w-10 h-10 text-[#0A2640]" />
             </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Sin locales configurados</h2>
+            <p className="text-sm text-gray-400 mb-6">Inicializa los locales para comenzar a registrar gastos de agua y luz.</p>
+            <button
+              onClick={inicializarLocales}
+              className="px-6 py-3 bg-[#0A2640] hover:bg-[#0d3050] text-white rounded-xl transition-all font-semibold text-sm shadow-sm hover:shadow-md"
+            >
+              Inicializar Locales
+            </button>
           </div>
         </div>
       </DashboardLayout>
@@ -354,82 +362,95 @@ export default function GastosPage() {
   const totalAgua = gastos.filter(g => g.tipo === 'agua').reduce((sum, g) => sum + g.montoTotal, 0) / (gastos.filter(g => g.tipo === 'agua').length || 1);
 
   return (
-    <DashboardLayout title="Gestión de Gastos">
-      <Toaster position="top-right" />
+    <DashboardLayout title="">
+      <Toaster position="top-right" toastOptions={{ style: { borderRadius: '12px', fontSize: '13px' } }} />
       <div className="min-h-screen p-6 md:p-8 bg-gray-50/30">
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Servicios</h1>
-            <p className="text-sm text-gray-400 mt-0.5">Gestión de luz y agua</p>
-          </div>
-          <button
-            onClick={() => {
-              setPasoModal(1);
-              setShowNuevoGasto(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#0A2640] hover:bg-[#0d3050] text-white text-sm font-medium rounded-xl transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Registro
-          </button>
-        </div>
-
-        {/* KPI Strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center">
-                <DollarSign className="w-4 h-4 text-gray-400" />
+        {/* ── Header ─────────────────────────────────────────── */}
+        <div className="animate-fade-up delay-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+          <div className="h-1 bg-gradient-to-r from-[#0A2640] via-cyan-400 to-sky-500" />
+          <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-[#0A2640] p-3 rounded-xl">
+                <DollarSign className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Último Mes</p>
-                <p className="text-lg font-bold text-gray-900">S/ {totalUltimoMes.toFixed(2)}</p>
+                <h1 className="text-xl font-bold text-[#0A2640]">Gestión de Servicios</h1>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Registra y distribuye gastos de agua y luz entre tus locales
+                </p>
               </div>
             </div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
-                <Lightbulb className="w-4 h-4 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Promedio Luz</p>
-                <p className="text-lg font-bold text-gray-900">S/ {totalLuz.toFixed(2)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-sky-50 flex items-center justify-center">
-                <Droplets className="w-4 h-4 text-sky-500" />
-              </div>
-              <div>
-                <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Promedio Agua</p>
-                <p className="text-lg font-bold text-gray-900">S/ {totalAgua.toFixed(2)}</p>
-              </div>
-            </div>
+            <button
+              onClick={() => { setPasoModal(1); setShowNuevoGasto(true); }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0A2640] hover:bg-[#0d3050] text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+            >
+              <Plus className="w-4 h-4" />
+              Nuevo Registro
+            </button>
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="flex flex-wrap items-center gap-2 mb-6">
-          <div className="flex bg-white rounded-lg border border-gray-200 p-1 gap-0.5">
+        {/* ── KPI Cards ──────────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {[
+            {
+              label: 'Último Mes',
+              value: `S/ ${totalUltimoMes.toFixed(2)}`,
+              icon: <DollarSign className="w-4 h-4 text-[#0A2640]" />,
+              iconBg: 'bg-slate-50',
+              border: 'border-slate-100',
+              delay: 'delay-50',
+            },
+            {
+              label: 'Promedio Luz',
+              value: `S/ ${totalLuz.toFixed(2)}`,
+              icon: <Lightbulb className="w-4 h-4 text-amber-500" />,
+              iconBg: 'bg-amber-50',
+              border: 'border-amber-100',
+              delay: 'delay-100',
+            },
+            {
+              label: 'Promedio Agua',
+              value: `S/ ${totalAgua.toFixed(2)}`,
+              icon: <Droplets className="w-4 h-4 text-sky-500" />,
+              iconBg: 'bg-sky-50',
+              border: 'border-sky-100',
+              delay: 'delay-150',
+            },
+          ].map((kpi) => (
+            <div
+              key={kpi.label}
+              className={`animate-fade-up ${kpi.delay} bg-white rounded-2xl border ${kpi.border} shadow-sm p-4 flex items-center gap-3 hover:shadow-md transition-all`}
+            >
+              <div className={`w-10 h-10 rounded-xl ${kpi.iconBg} flex items-center justify-center shrink-0`}>
+                {kpi.icon}
+              </div>
+              <div>
+                <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">{kpi.label}</p>
+                <p className="text-lg font-bold text-gray-900">{kpi.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Filtros ─────────────────────────────────────────── */}
+        <div className="animate-fade-up delay-200 flex flex-wrap items-center gap-2 mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
+          <div className="flex bg-gray-50 rounded-xl p-1 gap-0.5">
             {[
-              { key: 'todos' as const, label: 'Todos', icon: null },
-              { key: 'luz' as const, label: 'Luz', icon: <Lightbulb className="w-3.5 h-3.5" /> },
-              { key: 'agua' as const, label: 'Agua', icon: <Droplets className="w-3.5 h-3.5" /> },
+              { key: 'todos' as const, label: 'Todos' },
+              { key: 'luz'   as const, label: '⚡ Luz' },
+              { key: 'agua'  as const, label: '💧 Agua' },
             ].map(f => (
               <button
                 key={f.key}
                 onClick={() => setFiltroTipo(f.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filtroTipo === f.key
-                  ? 'bg-[#0A2640] text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  filtroTipo === f.key
+                    ? 'bg-[#0A2640] text-white shadow-sm'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-white'
+                }`}
               >
-                {f.icon}
                 {f.label}
               </button>
             ))}
@@ -439,27 +460,31 @@ export default function GastosPage() {
             <select
               value={filtroMes}
               onChange={(e) => setFiltroMes(e.target.value)}
-              className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-gray-300 cursor-pointer"
+              className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-[#0A2640] focus:ring-2 focus:ring-[#0A2640]/10 cursor-pointer transition-all"
             >
               <option value="">Todos los meses</option>
-              {mesesUnicos.map(mes => (
-                <option key={mes} value={mes}>{mes}</option>
+              {mesesUnicos.map(m => (
+                <option key={m} value={m}>{m}</option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Content - Grouped by Month */}
+        {/* ── Listado agrupado por mes ─────────────────────────── */}
         {gastosFiltr.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <DollarSign className="w-6 h-6 text-gray-400" />
+          <div className="animate-fade-up delay-250 text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4 border border-gray-100">
+              <DollarSign className="w-7 h-7 text-gray-300" />
             </div>
-            <h3 className="text-base font-semibold text-gray-800 mb-1">Sin registros</h3>
-            <p className="text-sm text-gray-400">Ajusta los filtros o crea un nuevo registro.</p>
+            <h3 className="text-base font-bold text-gray-700 mb-1">Sin registros</h3>
+            <p className="text-sm text-gray-400">
+              {filtroTipo !== 'todos' || filtroMes
+                ? 'Prueba ajustando los filtros.'
+                : 'Crea tu primer registro con el botón de arriba.'}
+            </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-up delay-250">
             {mesesOrdenados.map(mes => {
               const gastosMes = gastosPorMes[mes];
               const totalMes = gastosMes.reduce((sum, g) => sum + g.montoTotal, 0);
@@ -467,13 +492,18 @@ export default function GastosPage() {
 
               return (
                 <div key={mes}>
-                  {/* Month Header */}
-                  <div className="flex items-center justify-between mb-3 px-1">
-                    <h3 className="text-sm font-semibold text-gray-500 capitalize">{mesLabel}</h3>
-                    <span className="text-xs font-medium text-gray-400 tabular-nums">
-                      Total: S/ {totalMes.toFixed(2)}
-                    </span>
+                  {/* Month separator */}
+                  <div className="flex items-center gap-3 mb-3 px-1">
+                    <div className="h-px flex-1 bg-gray-100" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-500 capitalize">{mesLabel}</span>
+                      <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        S/ {totalMes.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="h-px flex-1 bg-gray-100" />
                   </div>
+
                   {/* Cards */}
                   <div className="space-y-2">
                     {gastosMes.map((gasto) => (
