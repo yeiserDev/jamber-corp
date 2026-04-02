@@ -1,36 +1,149 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jamber Corp — Gestión de Gastos de Locales
 
-## Getting Started
+> Plataforma web para automatizar la distribución de gastos de agua y luz entre locales comerciales. Elimina el trabajo manual de calcular cuánto paga cada local por mes.
 
-First, run the development server:
+![Preview](public/images/preview.png)
+
+---
+
+## El Problema que Resuelve
+
+En muchos negocios con múltiples locales (panaderías, spas, academias, etc.) que comparten una sola factura de agua o luz, el propietario debe **calcular manualmente** cuánto corresponde pagar a cada local según su consumo de medidor. Este proceso es propenso a errores, lento y difícil de auditar.
+
+**Jamber Corp** digitaliza y automatiza ese proceso completo.
+
+---
+
+## Funcionalidades
+
+- **Dashboard** — Vista general con total del mes, comparativa vs mes anterior, gráfico histórico de 6 meses y distribución por local
+- **Registro de Gastos** — Ingresa la factura mensual de luz o agua, las lecturas de cada medidor y el sistema calcula automáticamente cuánto paga cada local
+- **Distribución inteligente** — Soporta locales con múltiples medidores; la diferencia de consumo se asigna automáticamente a la residencia
+- **Generación de Reportes** — Exporta el detalle de costos por local como imagen (PNG) para compartir o archivar
+- **Reporte Especial por Local** — Genera un reporte específico para locales tipo "profesor" con formato independiente
+- **Autenticación segura** — Login con contraseña hasheada (bcrypt) y sesión mediante cookie HTTP-only
+- **Roles** — Soporte para perfiles `admin` y `user`
+- **Calendario** — Visualiza qué meses tienen gastos registrados
+
+---
+
+## Tech Stack
+
+| Capa | Tecnología |
+|------|-----------|
+| Framework | Next.js 15 (App Router) |
+| UI | React 19 + Tailwind CSS 4 |
+| Lenguaje | TypeScript 5 |
+| Base de Datos | MongoDB Atlas |
+| ORM | Mongoose 9 |
+| Auth | bcryptjs + Cookie HTTP-only |
+| Iconos | Lucide React |
+| Notificaciones | react-hot-toast |
+| Reportes | html2canvas-pro |
+| Imágenes | Cloudinary |
+| Fuentes | Google Fonts — Outfit |
+
+---
+
+## Screenshots
+
+| Login | Dashboard | Gastos |
+|-------|-----------|--------|
+| ![Login](public/images/screenshot-login.png) | ![Dashboard](public/images/screenshot-dashboard.png) | ![Gastos](public/images/screenshot-gastos.png) |
+
+---
+
+## Instalación y uso local
+
+### Requisitos
+- Node.js 18+
+- Una base de datos en [MongoDB Atlas](https://cloud.mongodb.com) (gratis)
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/tu-usuario/jamber-corp.git
+cd jamber-corp
+```
+
+### 2. Instalar dependencias
+
+```bash
+npm install
+```
+
+### 3. Configurar variables de entorno
+
+```bash
+cp .env.example .env.local
+```
+
+Edita `.env.local` con tu URI de MongoDB y credenciales de Cloudinary (opcional).
+
+### 4. Inicializar usuarios demo
+
+Una sola vez, ejecuta en tu navegador o con curl:
+
+```bash
+curl -X POST http://localhost:3000/api/auth/init
+```
+
+Esto crea los usuarios de prueba en la base de datos.
+
+### 5. Levantar el servidor
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Credenciales Demo
 
-## Learn More
+| Usuario | Contraseña | Rol |
+|---------|-----------|-----|
+| `chopchop` | `123` | user |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estructura del Proyecto
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+jamber-corp/
+├── app/
+│   ├── api/
+│   │   ├── auth/          # Login, logout, inicialización
+│   │   ├── gastos/        # CRUD de registros de gastos
+│   │   └── locales/       # CRUD de locales comerciales
+│   ├── gastos/            # Página de gestión de gastos
+│   ├── login/             # Página de autenticación
+│   └── page.tsx           # Dashboard principal
+├── components/
+│   ├── DashboardLayout.tsx
+│   ├── Sidebar.tsx
+│   └── gastos/GastoCard.tsx
+├── lib/
+│   ├── db/mongodb.ts      # Conexión a MongoDB con cache
+│   └── models/            # Esquemas Mongoose (User, Local, Gasto)
+├── middleware.ts           # Protección de rutas con cookie
+├── types/                 # Interfaces TypeScript
+└── utils/                 # Generación de reportes
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+El proyecto está listo para desplegarse en **Vercel** con un click:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
+Solo necesitas configurar las variables de entorno en el panel de Vercel.
+
+---
+
+## Licencia
+
+MIT
