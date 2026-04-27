@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(taskkill /F /PID 49572)",
+      "Bash(npm run build:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(rm -rf \"c:/Users/yeise/Downloads/Jamber-Corp/jamber-corp/app/transportes\")",
+      "Bash(rm -rf \"c:/Users/yeise/Downloads/Jamber-Corp/jamber-corp/app/api/transportes\")",
+      "Bash(rm -f \"c:/Users/yeise/Downloads/Jamber-Corp/jamber-corp/lib/models/TransporteGasto.ts\")",
+      "Bash(rm -f \"c:/Users/yeise/Downloads/Jamber-Corp/jamber-corp/types/transporte.ts\")",
+      "Bash(vercel --version)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

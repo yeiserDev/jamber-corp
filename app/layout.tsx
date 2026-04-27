@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Outfit } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -12,15 +13,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-});
-
 export const metadata: Metadata = {
-  title: "Jamber Corp - Gestión de Gastos de Locales",
-  description: "Plataforma de gestión automatizada de gastos de agua y luz para locales comerciales. Distribución inteligente de costos por medidor y generación de reportes.",
+  title: "Jamber Corp — Gestión de Gastos",
+  description: "Plataforma de gestión automatizada de gastos de agua y luz para locales comerciales.",
 };
 
 export default function RootLayout({
@@ -29,9 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} antialiased`}
+        className={`${inter.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
         {children}

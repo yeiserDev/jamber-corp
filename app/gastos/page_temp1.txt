@@ -1,0 +1,657 @@
+"use client";
+
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Plus, Lightbulb, Droplets, Calendar, DollarSign, TrendingUp, ChevronDown, ChevronUp, X, FileText } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
+import ModalNuevoGasto from "./ModalNuevoGasto";
+
+export interface Local {
+  _id: string;
+  nombre: string;
+  tipo: 'panaderia' | 'spa' | 'profesor' | 'casa';
+  direccion: string;
+}
+
+interface Lectura {
+  localId: Local;
+  medidorNumero?: number;
+  lecturaAnterior: number;
+  lecturaActual: number;
+  consumo: number;
+}
+
+interface Gasto {
+  _id: string;
+  mes: string;
+  tipo: 'luz' | 'agua';
+  consumoTotal: number;
+  montoTotal: number;
+  cargoFijo?: number;
+  igv?: number;
+  otrosCargos?: number;
+  lecturas: Lectura[];
+  costosPorLocal: {
+    localId: Local;
+    consumo: number;
+    monto: number;
+  }[];
+  createdAt: string;
+}
+
+export default function GastosPage() {
+  const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [locales, setLocales] = useState<Local[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showNuevoGasto, setShowNuevoGasto] = useState(false);
+  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'luz' | 'agua'>('todos');
+  const [filtroMes, setFiltroMes] = useState<string>('');
+  const [expandedGasto, setExpandedGasto] = useState<string | null>(null);
+
+  // Form state
+  const [mes, setMes] = useState('');
+  const [tipo, setTipo] = useState<'luz' | 'agua'>('luz');
+  const [consumoTotal, setConsumoTotal] = useState('');
+  const [montoTotal, setMontoTotal] = useState('');
+  const [cargoFijo, setCargoFijo] = useState('');
+  const [igv, setIgv] = useState('');
+  const [otrosCargos, setOtrosCargos] = useState('');
+  const [lecturas, setLecturas] = useState<{
+    localId: string;
+    medidorNumero?: number;
+    lecturaAnterior: number;
+    lecturaActual: number;
+  }[]>([]);
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    try {
+      const [gastosRes, localesRes] = await Promise.all([
+        fetch('/api/gastos'),
+        fetch('/api/locales')
+      ]);
+
+      const gastosData = await gastosRes.json();
+      const localesData = await localesRes.json();
+
+      if (gastosData.success) {
+        setGastos(gastosData.gastos);
+      }
+
+      if (localesData.success) {
+        setLocales(localesData.locales);
+        // Inicializar lecturas solo con los locales que NO son casa
+        const localesConMedidor = localesData.locales.filter((l: Local) => l.tipo !== 'casa');
+        setLecturas(localesConMedidor.map((local: Local) => ({
+          localId: local._id,
+          medidorNumero: 1,
+          lecturaAnterior: 0,
+          lecturaActual: 0,
+        })));
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error al cargar datos:', error);
+      setLoading(false);
+    }
+  };
+
+  const inicializarLocales = async () => {
+    try {
+      const res = await fetch('/api/locales/init', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success) {
+        alert('Locales inicializados correctamente');
+        cargarDatos();
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al inicializar locales');
+    }
+  };
+
+  const handleSubmitGasto = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!mes || !consumoTotal || !montoTotal || lecturas.length === 0) {
+      alert('Por favor completa todos los campos obligatorios');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/gastos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mes,
+          tipo,
+          consumoTotal: parseFloat(consumoTotal),
+          montoTotal: parseFloat(montoTotal),
+          cargoFijo: cargoFijo ? parseFloat(cargoFijo) : 0,
+          igv: igv ? parseFloat(igv) : 0,
+          otrosCargos: otrosCargos ? parseFloat(otrosCargos) : 0,
+          lecturas,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert('Gasto registrado exitosamente');
+        setShowNuevoGasto(false);
+        resetForm();
+        cargarDatos();
+      } else {
+        alert(data.message || 'Error al registrar gasto');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al registrar gasto');
+    }
+  };
+
+  const resetForm = () => {
+    setMes('');
+    setTipo('luz');
+    setConsumoTotal('');
+    setMontoTotal('');
+    setCargoFijo('');
+    setIgv('');
+    setOtrosCargos('');
+    const localesConMedidor = locales.filter(l => l.tipo !== 'casa');
+    setLecturas(localesConMedidor.map(local => ({
+      localId: local._id,
+      medidorNumero: 1,
+      lecturaAnterior: 0,
+      lecturaActual: 0,
+    })));
+  };
+
+  const updateLectura = useCallback((index: number, field: string, value: number) => {
+    setLecturas(prev => {
+      const newLecturas = [...prev];
+      (newLecturas[index] as any)[field] = value;
+      return newLecturas;
+    });
+  }, []);
+
+  // 1. Función de filtrado
+  const gastosFiltr = gastos.filter(gasto => {
+    const coincideTipo = filtroTipo === 'todos' || gasto.tipo === filtroTipo;
+    const coincideMes = !filtroMes || gasto.mes === filtroMes;
+    return coincideTipo && coincideMes;
+  });
+
+  // 2. Función para calcular costo por unidad
+  const calcularCostoPorUnidad = (gasto: Gasto): number => {
+    if (gasto.consumoTotal === 0) return 0;
+    return gasto.montoTotal / gasto.consumoTotal;
+  };
+
+  // Calcular consumo de lecturas (locales con medidor)
+  const calcularConsumoLecturas = (): number => {
+    return lecturas.reduce((total, lectura) => {
+      const consumo = lectura.lecturaActual - lectura.lecturaAnterior;
+      return total + (consumo > 0 ? consumo : 0);
+    }, 0);
+  };
+
+  // Calcular consumo de casa (automático)
+  const calcularConsumoCasa = (): number => {
+    const totalConsumo = parseFloat(consumoTotal) || 0;
+    const consumoLecturas = calcularConsumoLecturas();
+    const consumoCasa = totalConsumo - consumoLecturas;
+    return consumoCasa > 0 ? consumoCasa : 0;
+  };
+
+  // Estados para navegación del modal
+  const [pasoModal, setPasoModal] = useState(1);
+
+  // Memoizar cálculos para uso en el modal
+  const consumoLecturas = useMemo(() => calcularConsumoLecturas(), [lecturas]);
+  const consumoCasa = useMemo(() => calcularConsumoCasa(), [consumoTotal, lecturas]);
+
+  // Obtener meses únicos para filtro
+  const mesesUnicos = Array.from(new Set(gastos.map(g => g.mes))).sort().reverse();
+
+  // 3. Componente de tarjeta de gasto expandible
+  const GastoCard = ({ gasto }: { gasto: Gasto }) => {
+    const isExpanded = expandedGasto === gasto._id;
+    const costoPorUnidad = calcularCostoPorUnidad(gasto);
+    const localCasa = gasto.lecturas.find(l => l.localId.tipo === 'casa');
+
+    const colores = gasto.tipo === 'luz'
+      ? { bg: 'bg-white', border: 'border-gray-100', text: 'text-[#0A2640]', icon: 'bg-[#0A2640]/10', iconColor: 'text-[#0A2640]' }
+      : { bg: 'bg-white', border: 'border-gray-100', text: 'text-[#0A2640]', icon: 'bg-[#0A2640]/10', iconColor: 'text-[#0A2640]' };
+
+    return (
+      <div className={`${colores.bg} rounded-2xl shadow-sm border ${colores.border} overflow-hidden transition-all duration-300 hover:shadow-md`}>
+        {/* Header */}
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className={`${colores.icon} p-3 rounded-lg`}>
+                {gasto.tipo === 'luz' ? (
+                  <Lightbulb className={`w-6 h-6 ${colores.iconColor}`} />
+                ) : (
+                  <Droplets className={`w-6 h-6 ${colores.iconColor}`} />
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">{gasto.mes}</h3>
+                <p className="text-sm text-gray-500 capitalize">{gasto.tipo}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setExpandedGasto(isExpanded ? null : gasto._id)}
+              className={`${colores.icon} p-2 rounded-lg transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+            >
+              <ChevronDown className={`w-5 h-5 ${colores.iconColor}`} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">Consumo Total</p>
+              <p className={`text-xl font-bold ${colores.text}`}>
+                {gasto.consumoTotal.toFixed(2)} {gasto.tipo === 'luz' ? 'kWh' : 'm³'}
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">Monto Total</p>
+              <p className={`text-xl font-bold ${colores.text}`}>
+                S/ {gasto.montoTotal.toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenido expandido */}
+        {isExpanded && (
+          <div className="border-t border-gray-100 p-6 space-y-6">
+            {/* Desglose de costos */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Desglose de Costos
+              </h4>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                {gasto.cargoFijo && gasto.cargoFijo > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Cargo Fijo:</span>
+                    <span className="text-gray-800">S/ {gasto.cargoFijo.toFixed(2)}</span>
+                  </div>
+                )}
+                {gasto.igv && gasto.igv > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">IGV:</span>
+                    <span className="text-gray-800">S/ {gasto.igv.toFixed(2)}</span>
+                  </div>
+                )}
+                {gasto.otrosCargos && gasto.otrosCargos > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Otros Cargos:</span>
+                    <span className="text-gray-800">S/ {gasto.otrosCargos.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className={`flex justify-between text-sm ${(gasto.cargoFijo || gasto.igv || gasto.otrosCargos) ? 'pt-2 border-t border-gray-200' : ''} font-semibold`}>
+                  <span className={colores.text}>Costo por {gasto.tipo === 'luz' ? 'kWh' : 'm³'}:</span>
+                  <span className={colores.text}>S/ {costoPorUnidad.toFixed(4)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Lecturas por local - Solo locales con medidor, NO casa */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Lecturas de Medidores
+              </h4>
+              <div className="space-y-2">
+                {gasto.lecturas.filter(l => l.localId.tipo !== 'casa').map((lectura, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-gray-50 rounded-lg p-3 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-800">{lectura.localId.nombre}</p>
+
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {lectura.lecturaAnterior} → {lectura.lecturaActual}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${colores.text}`}>{lectura.consumo.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500">{gasto.tipo === 'luz' ? 'kWh' : 'm³'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Costos por local - Solo locales a cobrar, NO casa */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" />
+                  Distribución de Costos
+                </h4>
+                <button
+                  onClick={() => generarReporte(gasto)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-[#0A2640] hover:bg-[#0A2640]/90 text-white text-xs rounded-lg transition-all"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Generar Reporte
+                </button>
+              </div>
+              <div className="space-y-2">
+                {gasto.costosPorLocal.filter(c => c.localId.tipo !== 'casa').map((costo, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-gray-50 rounded-lg p-3 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-800">{costo.localId.nombre}</p>
+
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {costo.consumo.toFixed(2)} {gasto.tipo === 'luz' ? 'kWh' : 'm³'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${colores.text}`}>S/ {costo.monto.toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Función para generar reporte de cobro como imagen profesional
+  // Última actualización: 2026-01-04 19:42 - Diseño ajustado al mockup exacto
+  const generarReporte = (gasto: Gasto) => {
+    // Verificación de versión - BORRAR DESPUÉS
+    console.log('🎨 VERSIÓN NUEVA DEL REPORTE - 19:45');
+
+    const costoPorUnidad = calcularCostoPorUnidad(gasto);
+    const fecha = new Date().toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    // Filtrar solo los locales que NO son casa
+    const localesACobrar = gasto.costosPorLocal.filter(c => c.localId.tipo !== 'casa');
+    const totalACobrar = localesACobrar.reduce((sum, c) => sum + c.monto, 0);
+
+    // Crear canvas para generar la imagen
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+
+    // Dimensiones ajustadas para mejor proporción
+    const width = 1200;
+    const baseHeight = 900;
+    const extraHeight = localesACobrar.length * 130;
+    const height = baseHeight + extraHeight;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Paleta de colores exacta del mockup
+    const colors = {
+      primary: '#0A2640',
+      lightBg: '#F4F7FE',
+      softGray: '#E6E9EB',
+      white: '#FFFFFF',
+      text: '#0A2640',
+      textMedium: '#64748b',
+      textLight: '#94a3b8',
+      success: '#059669',
+      divider: '#CBD5E1'
+    };
+
+    // Fondo blanco limpio
+    ctx.fillStyle = colors.white;
+    ctx.fillRect(0, 0, width, height);
+
+    // ========== BARRA DECORATIVA SUPERIOR ==========
+    ctx.fillStyle = colors.primary;
+    ctx.fillRect(0, 0, width, 12);
+
+    let yPos = 60;
+
+    // ========== HEADER ==========
+    // Logo/Marca
+    ctx.font = 'bold 32px Arial';
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('JAMBERCORP', 60, yPos);
+
+    ctx.font = '14px Arial';
+    ctx.fillStyle = colors.textMedium;
+    ctx.fillText('Gestión Empresarial Profesional', 60, yPos + 26);
+
+    // Información del documento - lado derecho
+    ctx.textAlign = 'right';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = colors.textLight;
+    ctx.fillText('REPORTE DE SERVICIOS', width - 60, yPos - 10);
+
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = colors.text;
+    ctx.fillText(`Documento Nº ${gasto._id.slice(-8).toUpperCase()}`, width - 60, yPos + 10);
+
+    ctx.font = '13px Arial';
+    ctx.fillStyle = colors.textMedium;
+    ctx.fillText(`Fecha: ${fecha}`, width - 60, yPos + 28);
+
+    ctx.textAlign = 'left';
+
+    yPos += 70;
+
+    // Título del servicio con icono
+    ctx.font = 'bold 64px Arial';
+    ctx.fillStyle = colors.primary;
+    const icon = gasto.tipo === 'luz' ? '⚡' : '💧';
+    ctx.fillText(icon, 80, yPos);
+
+    ctx.font = 'bold 56px Arial';
+    ctx.fillText(gasto.tipo === 'luz' ? 'Luz' : 'Agua', 170, yPos);
+
+    ctx.font = '22px Arial';
+    ctx.fillStyle = colors.textMedium;
+    ctx.fillText(gasto.mes, 170, yPos + 40);
+
+    yPos += 80;
+
+    // Línea divisoria
+    ctx.strokeStyle = colors.softGray;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, yPos);
+    ctx.lineTo(width - 80, yPos);
+    ctx.stroke();
+
+    yPos += 50;
+
+    // ========== RESUMEN FINANCIERO ==========
+    ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = colors.text;
+    ctx.fillText('Resumen Financiero', 80, yPos);
+
+    yPos += 45;
+
+    // Datos con fondos alternados
+    const datos: Array<{ label: string; value: string; highlight?: boolean }> = [
+      { label: 'Consumo Total', value: `${gasto.consumoTotal.toFixed(2)} ${gasto.tipo === 'luz' ? 'kWh' : 'm³'}` },
+      { label: 'Monto Total', value: `S/ ${gasto.montoTotal.toFixed(2)}`, highlight: true },
+      { label: `Tarifa por ${gasto.tipo === 'luz' ? 'kWh' : 'm³'}`, value: `S/ ${costoPorUnidad.toFixed(4)}` }
+    ];
+
+    if (gasto.cargoFijo && gasto.cargoFijo > 0) {
+      datos.splice(2, 0, { label: 'Cargo Fijo', value: `S/ ${gasto.cargoFijo.toFixed(2)}` });
+    }
+    if (gasto.igv && gasto.igv > 0) {
+      datos.splice(2, 0, { label: 'IGV (18%)', value: `S/ ${gasto.igv.toFixed(2)}` });
+    }
+
+    datos.forEach((dato, idx) => {
+      if (idx % 2 === 0) {
+        ctx.fillStyle = colors.lightBg;
+        ctx.fillRect(80, yPos - 10, width - 160, 48);
+      }
+
+      ctx.font = dato.highlight ? 'bold 18px Arial' : '17px Arial';
+      ctx.fillStyle = colors.text;
+      ctx.fillText(dato.label, 100, yPos + 18);
+
+      ctx.font = dato.highlight ? 'bold 22px Arial' : 'bold 19px Arial';
+      ctx.fillStyle = colors.text;
+      ctx.textAlign = 'right';
+      ctx.fillText(dato.value, width - 100, yPos + 18);
+      ctx.textAlign = 'left';
+
+      yPos += 48;
+    });
+
+    yPos += 30;
+
+    // ========== DISTRIBUCIÓN POR LOCAL ==========
+    ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = colors.text;
+    ctx.fillText('Distribución por Local', 80, yPos);
+
+    yPos += 45;
+
+    // Tarjetas de locales
+    localesACobrar.forEach((costo, idx) => {
+      // Card con borde
+      ctx.fillStyle = colors.white;
+      ctx.strokeStyle = colors.softGray;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.03)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 2;
+
+      roundRect(ctx, 80, yPos, width - 160, 110, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+
+      // Número en círculo
+      ctx.fillStyle = colors.primary;
+      ctx.beginPath();
+      ctx.arc(130, yPos + 55, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = 'bold 24px Arial';
+      ctx.fillStyle = colors.white;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${idx + 1}`, 130, yPos + 64);
+      ctx.textAlign = 'left';
+
+      // Nombre del local
+      ctx.font = 'bold 22px Arial';
+      ctx.fillStyle = colors.text;
+      ctx.fillText(costo.localId.nombre, 180, yPos + 38);
+
+      // Tipo
+      ctx.font = '15px Arial';
+      ctx.fillStyle = colors.textMedium;
+      ctx.fillText(`Tipo: ${costo.localId.tipo.charAt(0).toUpperCase() + costo.localId.tipo.slice(1)}`, 180, yPos + 62);
+
+      // Consumo
+      ctx.fillText(`Consumo: ${costo.consumo.toFixed(2)} ${gasto.tipo === 'luz' ? 'kWh' : 'm³'}`, 180, yPos + 84);
+
+      // Monto
+      const montoText = `S/ ${costo.monto.toFixed(2)}`;
+      ctx.font = 'bold 32px Arial';
+      ctx.fillStyle = colors.success;
+      ctx.textAlign = 'right';
+      ctx.fillText(montoText, width - 110, yPos + 62);
+      ctx.textAlign = 'left';
+
+      yPos += 130;
+    });
+
+    yPos += 20;
+
+    // ========== TOTAL FINAL ==========
+    ctx.fillStyle = colors.primary;
+    ctx.shadowColor = 'rgba(10, 38, 64, 0.12)';
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 4;
+    roundRect(ctx, 80, yPos, width - 160, 85, 10);
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    ctx.font = 'bold 24px Arial';
+    ctx.fillStyle = colors.white;
+    ctx.fillText('TOTAL A COBRAR', 120, yPos + 52);
+
+    const totalText = `S/ ${totalACobrar.toFixed(2)}`;
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(totalText, width - 120, yPos + 54);
+    ctx.textAlign = 'left';
+
+    yPos += 110;
+
+    // Footer
+    ctx.font = '13px Arial';
+    ctx.fillStyle = colors.textLight;
+    ctx.textAlign = 'center';
+    ctx.fillText('JamberCorp - Sistema de Gestión Empresarial', width / 2, yPos + 15);
+    ctx.fillText(`Generado el ${fecha}`, width / 2, yPos + 34);
+    ctx.textAlign = 'left';
+
+    // Convertir canvas a imagen y descargar
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Reporte_${gasto.tipo}_${gasto.mes}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    }, 'image/png');
+  };
+
+  // Función auxiliar para dibujar rectángulos con bordes redondeados
+  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+
