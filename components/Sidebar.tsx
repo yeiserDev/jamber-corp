@@ -5,9 +5,6 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Receipt,
-  FileText,
-  Users,
-  Settings,
   LogOut,
 } from "lucide-react";
 
@@ -65,35 +62,6 @@ export default function Sidebar() {
         >
           <Receipt className="w-[18px] h-[18px] flex-shrink-0" />
           <span>Gastos de Locales</span>
-        </Link>
-
-        <Link
-          href="#"
-          className="flex items-center gap-3 px-4 py-2.5 text-white/50 hover:text-white hover:bg-white/[0.06] rounded-[12px] transition-all text-[14px] font-medium"
-        >
-          <FileText className="w-[18px] h-[18px] flex-shrink-0" />
-          <span>Documentos</span>
-        </Link>
-
-        <Link
-          href="#"
-          className="flex items-center gap-3 px-4 py-2.5 text-white/50 hover:text-white hover:bg-white/[0.06] rounded-[12px] transition-all text-[14px] font-medium"
-        >
-          <Users className="w-[18px] h-[18px] flex-shrink-0" />
-          <span>Clientes</span>
-        </Link>
-
-        {/* Separador */}
-        <div className="pt-4 pb-1 px-4 text-[11px] font-semibold text-white/25 uppercase tracking-widest">
-          Sistema
-        </div>
-
-        <Link
-          href="#"
-          className="flex items-center gap-3 px-4 py-2.5 text-white/50 hover:text-white hover:bg-white/[0.06] rounded-[12px] transition-all text-[14px] font-medium"
-        >
-          <Settings className="w-[18px] h-[18px] flex-shrink-0" />
-          <span>Configuración</span>
         </Link>
 
         <button
