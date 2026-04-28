@@ -180,17 +180,6 @@ export default function Dashboard() {
     return Object.values(r).sort((a, b) => b.total - a.total);
   }
 
-  /* â”€â”€ Calendario â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  const mesesConGastos = gastos.map(g => g.mes);
-  function generarCalendario() {
-    const y = mesCalendario.getFullYear(), m = mesCalendario.getMonth();
-    const dias: (number | null)[] = [];
-    for (let i = 0; i < new Date(y, m, 1).getDay(); i++) dias.push(null);
-    for (let d = 1; d <= new Date(y, m + 1, 0).getDate(); d++) dias.push(d);
-    return dias;
-  }
-  const tieneGastoEnMes = (y: number, m: number) =>
-    mesesConGastos.includes(`${y}-${String(m + 1).padStart(2, "0")}`);
 
   /* â”€â”€ Guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   if (loading) return <Skeleton />;
