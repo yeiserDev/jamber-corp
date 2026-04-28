@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Droplets,
   Receipt,
-  ChevronRight,
   ArrowUpRight,
   ArrowDownRight,
   Zap,
@@ -15,6 +14,10 @@ import {
   List,
   LayoutDashboard,
   ArrowLeftRight,
+  CalendarCheck,
+  Clock,
+  Flame,
+  AlertCircle,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -34,12 +37,11 @@ interface Gasto {
   }[];
 }
 
-/* ── Sistema de color por local ──────────────────────────── */
+/* ——— Sistema de color por local ——————————————————————— */
 type ColorSet = { hex: string; bg: string; light: string; text: string; badge: string };
 
 const LOCAL_COLORS: Record<string, ColorSet> = {
   spa:       { hex: "#0071e3", bg: "bg-[#0071e3]", light: "bg-blue-50",   text: "text-[#0071e3]", badge: "bg-blue-50 text-[#0071e3]" },
-  panaderia: { hex: "#ff9500", bg: "bg-[#ff9500]", light: "bg-amber-50",  text: "text-amber-600", badge: "bg-amber-50 text-amber-600" },
   panadería: { hex: "#ff9500", bg: "bg-[#ff9500]", light: "bg-amber-50",  text: "text-amber-600", badge: "bg-amber-50 text-amber-600" },
   profesor:  { hex: "#34c759", bg: "bg-[#34c759]", light: "bg-green-50",  text: "text-green-700", badge: "bg-green-50 text-green-700" },
   profesora: { hex: "#34c759", bg: "bg-[#34c759]", light: "bg-green-50",  text: "text-green-700", badge: "bg-green-50 text-green-700" },
@@ -61,13 +63,13 @@ function colorLocal(nombre: string, tipo: string, fallbackIdx = 0): ColorSet {
   return FALLBACK_COLORS[fallbackIdx % FALLBACK_COLORS.length];
 }
 
-/* ── Formateo de mes ─────────────────────────────────────── */
+/* â”€â”€ Formateo de mes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const fmesLargo = (m: string) =>
   new Date(m + "-02").toLocaleDateString("es-ES", { month: "long", year: "numeric" });
 const fmesCorto = (m: string) =>
   new Date(m + "-02").toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
 
-/* ── Skeleton ────────────────────────────────────────────── */
+/* â”€â”€ Skeleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function Skeleton() {
   return (
     <DashboardLayout title="">
@@ -83,12 +85,11 @@ function Skeleton() {
   );
 }
 
-/* ══════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 export default function Dashboard() {
   const [gastos,          setGastos]          = useState<Gasto[]>([]);
   const [loading,         setLoading]         = useState(true);
   const [activeTab,       setActiveTab]       = useState<TabId>("resumen");
-  const [mesCalendario,   setMesCalendario]   = useState(new Date());
   const [localSel,        setLocalSel]        = useState("");
   const [mesComparar,     setMesComparar]     = useState("");
   const [filtroHistorial, setFiltroHistorial] = useState<TipoFiltro>("todos");
@@ -109,7 +110,7 @@ export default function Dashboard() {
     finally { setLoading(false); }
   }
 
-  /* ── Helpers de datos ──────────────────────────────────── */
+  /* â”€â”€ Helpers de datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
   function obtenerLocales() {
     const map: Record<string, { id: string; nombre: string; tipo: string }> = {};
@@ -125,10 +126,10 @@ export default function Dashboard() {
   }
 
   function calcularResumen() {
-    const hoy      = new Date().toISOString().slice(0, 7);
-    const anterior = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7);
-    const actual   = gastos.filter(g => g.mes === hoy);
-    const ant      = gastos.filter(g => g.mes === anterior);
+    const anioActual   = new Date().getFullYear().toString();          // "2026"
+    const anioAnterior = (new Date().getFullYear() - 1).toString();   // "2025"
+    const actual   = gastos.filter(g => g.mes.startsWith(anioActual));
+    const ant      = gastos.filter(g => g.mes.startsWith(anioAnterior));
     const totalActual   = actual.reduce((s, g) => s + g.montoTotal, 0);
     const totalAnterior = ant.reduce((s, g) => s + g.montoTotal, 0);
     const totalLuz  = actual.filter(g => g.tipo === "luz").reduce((s, g) => s + g.montoTotal, 0);
@@ -179,7 +180,7 @@ export default function Dashboard() {
     return Object.values(r).sort((a, b) => b.total - a.total);
   }
 
-  /* ── Calendario ────────────────────────────────────────── */
+  /* â”€â”€ Calendario â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const mesesConGastos = gastos.map(g => g.mes);
   function generarCalendario() {
     const y = mesCalendario.getFullYear(), m = mesCalendario.getMonth();
@@ -191,23 +192,63 @@ export default function Dashboard() {
   const tieneGastoEnMes = (y: number, m: number) =>
     mesesConGastos.includes(`${y}-${String(m + 1).padStart(2, "0")}`);
 
-  /* ── Guard ─────────────────────────────────────────────── */
+  /* â”€â”€ Guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   if (loading) return <Skeleton />;
 
-  /* ── Datos derivados ───────────────────────────────────── */
+  /* â”€â”€ Datos derivados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const locales      = obtenerLocales();
   const meses        = Array.from(new Set(gastos.map(g => g.mes))).sort().reverse();
   const stats        = calcularResumen();
   const distLocal    = gastosPorLocalResumen(stats.gastosActuales);
   const subiendo     = stats.cambio >= 0;
-  const mesNombre    = new Date().toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  const anioActual   = new Date().getFullYear();
   const localActual  = localSel || locales.find(l => l.tipo !== "casa")?.id || locales[0]?.id || "";
   const localObj     = locales.find(l => l.id === localActual);
   const histLocal    = localActual ? historialLocal(localActual) : [];
   const comparacion  = mesComparar ? obtenerComparacion(mesComparar) : [];
   const maxLocal     = Math.max(...distLocal.map(l => l.total), 1);
 
-  /* ── Shared CSS helpers ────────────────────────────────── */
+  /* â”€â”€ Insights â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  // Mes mÃ¡s caro del historial completo
+  const mesesAgrupados = meses.map(m => ({
+    mes: m,
+    total: gastos.filter(g => g.mes === m).reduce((s, g) => s + g.montoTotal, 0),
+  }));
+  const mesMasCaro = mesesAgrupados.reduce((max, m) => m.total > max.total ? m : max, { mes: "", total: 0 });
+
+  // Promedio mensual (todos los meses con datos)
+  const promedioMensual = mesesAgrupados.length > 0
+    ? mesesAgrupados.reduce((s, m) => s + m.total, 0) / mesesAgrupados.length
+    : 0;
+
+  // Meses sin registro en el aÃ±o actual
+  const mesesDelAnio = Array.from({ length: 12 }, (_, i) =>
+    `${anioActual}-${String(i + 1).padStart(2, "0")}`
+  );
+  const mesesConDatos = new Set(gastos.filter(g => g.mes.startsWith(String(anioActual))).map(g => g.mes));
+  const mesesSinRegistro = mesesDelAnio.filter(m => !mesesConDatos.has(m));
+  // Solo hasta el mes actual (no contar meses futuros)
+  const mesActualIdx = new Date().getMonth(); // 0-based
+  const mesesPasadosSinRegistro = mesesSinRegistro.filter(m => {
+    const mIdx = parseInt(m.slice(5, 7)) - 1;
+    return mIdx <= mesActualIdx;
+  });
+
+  // Ãšltimo registro
+  const ultimoRegistro = gastos.length > 0
+    ? [...gastos].sort((a, b) => b.mes.localeCompare(a.mes))[0]
+    : null;
+
+  // Datos para mini grÃ¡fico de tendencia (12 meses recientes)
+  const tendencia12 = [...mesesAgrupados].sort((a, b) => a.mes.localeCompare(b.mes)).slice(-12);
+  const maxTendencia = Math.max(...tendencia12.map(t => t.total), 1);
+  const tendenciaConDetalle = tendencia12.map(t => ({
+    ...t,
+    luz:  gastos.filter(g => g.mes === t.mes && g.tipo === "luz").reduce((s, g) => s + g.montoTotal, 0),
+    agua: gastos.filter(g => g.mes === t.mes && g.tipo === "agua").reduce((s, g) => s + g.montoTotal, 0),
+  }));
+
+  /* â”€â”€ Shared CSS helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const card      = "bg-white rounded-[18px] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04)]";
   const cardHover = `${card} hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all`;
   const lbl       = "text-[11px] font-medium text-[#aeaeb2] uppercase tracking-wider";
@@ -221,15 +262,15 @@ export default function Dashboard() {
     { id: "comparar",  label: "Comparar",          icon: <ArrowLeftRight className="w-3.5 h-3.5" /> },
   ];
 
-  /* ══════════════════════════════════════════════════════════
+  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      RENDER
-  ══════════════════════════════════════════════════════════ */
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
   return (
     <DashboardLayout title="">
 
-      {/* ── Tab bar ───────────────────────────────────────── */}
+      {/* â”€â”€ Tab bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        {/* Tabs: scroll horizontal en móvil */}
+        {/* Tabs: scroll horizontal en mÃ³vil */}
         <div className="overflow-x-auto -mx-1 px-1">
           <div className="flex bg-[#e5e5ea] p-1 rounded-[14px] gap-0.5 w-max">
             {TABS.map(t => (
@@ -257,9 +298,9 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* ══════════════════════════════════════════════════════
-          TAB 1 — RESUMEN
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          TAB 1 â€” RESUMEN
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === "resumen" && (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
           {/* Columna principal */}
@@ -274,12 +315,12 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <h1 className={`text-[18px] sm:text-[22px] font-semibold ${tp} tracking-tight`}>Panel de Control</h1>
-                    <p className={`text-[13px] ${ts} capitalize mt-0.5`}>{mesNombre}</p>
+                    <p className={`text-[13px] ${ts} mt-0.5`}>Resumen anual {anioActual}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between sm:justify-end gap-4">
                   <div className="text-right">
-                    <p className={`${lbl} mb-1`}>Total del Mes</p>
+                    <p className={`${lbl} mb-1`}>Total del AÃ±o</p>
                     <p className={`text-[26px] sm:text-[32px] font-bold ${tp} tracking-tight leading-none`}>
                       S/ {stats.totalActual.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
                     </p>
@@ -287,150 +328,261 @@ export default function Dashboard() {
                   <div className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-[12px] ${subiendo ? "bg-red-50 text-red-500" : "bg-[#e8f5e9] text-[#2e7d32]"}`}>
                     {subiendo ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                     <span className="text-[13px] sm:text-[14px] font-semibold">{Math.abs(stats.cambio).toFixed(1)}%</span>
-                    <span className="hidden sm:inline text-[12px] opacity-60">vs anterior</span>
+                    <span className="hidden sm:inline text-[12px] opacity-60">vs {anioActual - 1}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Stat cards */}
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
-              <div className={`animate-fade-up delay-100 ${cardHover} p-6`}>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="bg-amber-50 p-3 rounded-[12px]"><Zap className="w-5 h-5 text-amber-500" /></div>
-                  <span className={`text-[10px] font-semibold ${ts} bg-[#f5f5f7] px-2.5 py-1 rounded-full uppercase`}>
-                    {stats.gastosActuales.filter(g => g.tipo === "luz").length} reg.
+            {/* â”€â”€ Insight cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            <div className="grid grid-cols-2 gap-3">
+
+              {/* Mes mÃ¡s caro */}
+              <div className={`animate-fade-up delay-100 ${card} p-5 group hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-all`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-[7px] bg-[#f5f5f7] flex items-center justify-center">
+                      <Flame className="w-3 h-3 text-[#6e6e73]" />
+                    </div>
+                    <p className={lbl}>Pico de gasto</p>
+                  </div>
+                  {mesMasCaro.mes && (
+                    <span className="text-[10px] font-semibold text-[#6e6e73] bg-[#f5f5f7] px-2 py-0.5 rounded-full">
+                      mÃ¡ximo
+                    </span>
+                  )}
+                </div>
+                {mesMasCaro.mes ? (
+                  <>
+                    <p className="text-[28px] font-semibold text-[#1d1d1f] tracking-[-0.5px] leading-none">
+                      S/ {mesMasCaro.total.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className={`text-[12px] ${ts} mt-2 capitalize`}>
+                      {new Date(mesMasCaro.mes + "-02").toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
+                    </p>
+                  </>
+                ) : <p className={`text-[13px] ${ts}`}>Sin datos</p>}
+              </div>
+
+              {/* Promedio mensual */}
+              <div className={`animate-fade-up delay-150 ${card} p-5 hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-all`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-[7px] bg-[#f5f5f7] flex items-center justify-center">
+                      <TrendingUp className="w-3 h-3 text-[#6e6e73]" />
+                    </div>
+                    <p className={lbl}>Promedio / mes</p>
+                  </div>
+                  <span className="text-[10px] font-semibold text-[#6e6e73] bg-[#f5f5f7] px-2 py-0.5 rounded-full">
+                    {mesesAgrupados.length} meses
                   </span>
                 </div>
-                <p className={`${lbl} mb-1`}>Electricidad</p>
-                <p className={`text-[24px] font-bold ${tp} tracking-tight`}>S/ {stats.totalLuz.toFixed(2)}</p>
-                <div className="mt-4 h-1 bg-[#f5f5f7] rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-400 rounded-full bar-grow"
-                    style={{ width: stats.totalActual > 0 ? `${(stats.totalLuz / stats.totalActual) * 100}%` : "0%" }} />
-                </div>
+                <p className="text-[28px] font-semibold text-[#1d1d1f] tracking-[-0.5px] leading-none">
+                  S/ {promedioMensual.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                </p>
+                <p className={`text-[12px] ${ts} mt-2`}>
+                  {promedioMensual < mesMasCaro.total
+                    ? `${((mesMasCaro.total - promedioMensual) / promedioMensual * 100).toFixed(0)}% bajo el pico`
+                    : "Referencia histÃ³rica"}
+                </p>
               </div>
 
-              <div className={`animate-fade-up delay-150 ${cardHover} p-6`}>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="bg-sky-50 p-3 rounded-[12px]"><Droplets className="w-5 h-5 text-sky-500" /></div>
-                  <span className={`text-[10px] font-semibold ${ts} bg-[#f5f5f7] px-2.5 py-1 rounded-full uppercase`}>
-                    {stats.gastosActuales.filter(g => g.tipo === "agua").length} reg.
+              {/* Meses sin registro */}
+              <div className={`animate-fade-up delay-200 ${card} p-5 hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-all`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-[7px] flex items-center justify-center ${mesesPasadosSinRegistro.length > 0 ? "bg-amber-50" : "bg-[#f5f5f7]"}`}>
+                      <AlertCircle className={`w-3 h-3 ${mesesPasadosSinRegistro.length > 0 ? "text-amber-500" : "text-[#6e6e73]"}`} />
+                    </div>
+                    <p className={lbl}>Cobertura</p>
+                  </div>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${mesesPasadosSinRegistro.length > 0 ? "text-amber-600 bg-amber-50" : "text-emerald-600 bg-emerald-50"}`}>
+                    {anioActual}
                   </span>
                 </div>
-                <p className={`${lbl} mb-1`}>Agua</p>
-                <p className={`text-[24px] font-bold ${tp} tracking-tight`}>S/ {stats.totalAgua.toFixed(2)}</p>
-                <div className="mt-4 h-1 bg-[#f5f5f7] rounded-full overflow-hidden">
-                  <div className="h-full bg-sky-400 rounded-full bar-grow"
-                    style={{ width: stats.totalActual > 0 ? `${(stats.totalAgua / stats.totalActual) * 100}%` : "0%" }} />
-                </div>
-              </div>
-
-              <div className={`animate-fade-up delay-200 ${cardHover} p-6`}>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="bg-[#f5f5f7] p-3 rounded-[12px]"><Receipt className="w-5 h-5 text-[#6e6e73]" /></div>
-                  <span className={`text-[10px] font-semibold ${ts} bg-[#f5f5f7] px-2.5 py-1 rounded-full uppercase`}>histórico</span>
-                </div>
-                <p className={`${lbl} mb-1`}>Total Registros</p>
-                <p className={`text-[24px] font-bold ${tp} tracking-tight`}>{gastos.length}</p>
-                <div className="mt-4 h-1 bg-[#f5f5f7] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#0071e3] rounded-full bar-grow w-full" />
-                </div>
-              </div>
-            </div>
-
-            {/* Distribución por local (solo comerciales) */}
-            <div className={`animate-fade-up delay-250 ${card}`}>
-              <div className="px-6 py-5 border-b border-black/[0.04] flex items-center justify-between">
-                <div>
-                  <h2 className={`text-[15px] font-semibold ${tp} tracking-tight`}>Distribución — Locales Comerciales</h2>
-                  <p className={`text-[12px] ${ts} mt-0.5`}>Spa · Panadería · Profesor — mes actual</p>
-                </div>
-                <span className={`text-[12px] ${ts} bg-[#f5f5f7] px-3 py-1.5 rounded-[10px]`}>{distLocal.length} locales</span>
-              </div>
-
-              {distLocal.length === 0 ? (
-                <div className="py-14 text-center">
-                  <Building2 className="w-10 h-10 text-[#d1d1d6] mx-auto mb-3" />
-                  <p className={`text-[14px] ${ts}`}>Sin gastos este mes</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-black/[0.03]">
-                  {distLocal.map((local, idx) => {
-                    const pct = Math.round((local.total / maxLocal) * 100);
-                    const c   = colorLocal(local.nombre, local.tipo, idx);
+                <p className={`text-[28px] font-semibold tracking-[-0.5px] leading-none ${mesesPasadosSinRegistro.length > 0 ? "text-[#1d1d1f]" : "text-[#1d1d1f]"}`}>
+                  {mesActualIdx + 1 - mesesPasadosSinRegistro.length}
+                  <span className="text-[16px] font-normal text-[#6e6e73]"> / {mesActualIdx + 1}</span>
+                </p>
+                <div className="flex gap-1 mt-3">
+                  {Array.from({ length: mesActualIdx + 1 }, (_, i) => {
+                    const key = `${anioActual}-${String(i + 1).padStart(2, "0")}`;
                     return (
-                      <div key={idx} className="px-6 py-5 hover:bg-[#f5f5f7]/60 transition-colors">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-[10px] ${c.bg} flex items-center justify-center text-white text-[12px] font-bold`}>{idx + 1}</div>
-                            <div>
-                              <p className={`text-[14px] font-semibold ${tp}`}>{local.nombre}</p>
-                              <p className={`text-[12px] ${ts} capitalize`}>{local.tipo}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-[17px] font-bold ${tp} tracking-tight`}>S/ {local.total.toFixed(2)}</p>
-                            <p className={`text-[11px] ${ts}`}>{pct}% del total</p>
-                          </div>
-                        </div>
-                        <div className="h-1.5 bg-[#f5f5f7] rounded-full overflow-hidden mb-3">
-                          <div className="h-full rounded-full bar-grow" style={{ width: `${pct}%`, backgroundColor: c.hex }} />
-                        </div>
-                        <div className="flex items-center gap-5">
-                          <div className="flex items-center gap-1.5"><Zap className="w-3 h-3 text-amber-500" /><span className={`text-[12px] ${ts}`}>S/ {local.luz.toFixed(2)}</span></div>
-                          <div className="flex items-center gap-1.5"><Droplets className="w-3 h-3 text-sky-500" /><span className={`text-[12px] ${ts}`}>S/ {local.agua.toFixed(2)}</span></div>
-                        </div>
-                      </div>
+                      <div key={i} title={new Date(`${key}-02`).toLocaleDateString("es-ES", { month: "short" })}
+                        className={`flex-1 h-1 rounded-full ${mesesConDatos.has(key) ? "bg-[#0071e3]" : "bg-[#e5e5ea]"}`} />
                     );
                   })}
                 </div>
-              )}
+                <p className={`text-[11px] ${ts} mt-2`}>
+                  {mesesPasadosSinRegistro.length === 0 ? "Todos los meses registrados" : `Faltan ${mesesPasadosSinRegistro.length} mes${mesesPasadosSinRegistro.length > 1 ? "es" : ""}`}
+                </p>
+              </div>
+
+              {/* Ãšltimo registro */}
+              <div className={`animate-fade-up delay-250 ${card} p-5 hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-all`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-[7px] bg-[#f5f5f7] flex items-center justify-center">
+                      <Clock className="w-3 h-3 text-[#6e6e73]" />
+                    </div>
+                    <p className={lbl}>Ãšltimo registro</p>
+                  </div>
+                  {ultimoRegistro && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ultimoRegistro.tipo === "luz" ? "text-amber-600 bg-amber-50" : "text-sky-600 bg-sky-50"}`}>
+                      {ultimoRegistro.tipo === "luz" ? "Electricidad" : "Agua"}
+                    </span>
+                  )}
+                </div>
+                {ultimoRegistro ? (
+                  <>
+                    <p className="text-[28px] font-semibold text-[#1d1d1f] tracking-[-0.5px] leading-none">
+                      S/ {ultimoRegistro.montoTotal.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className={`text-[12px] ${ts} mt-2 capitalize`}>
+                      {new Date(ultimoRegistro.mes + "-02").toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
+                    </p>
+                  </>
+                ) : <p className={`text-[13px] ${ts}`}>Sin registros aÃºn</p>}
+              </div>
             </div>
+
+            {/* Gráfico de tendencia */}
+            {tendenciaConDetalle.length > 0 && (
+              <div className={`animate-fade-up delay-300 ${card} p-6`}>
+                <div className="flex items-end justify-between mb-8">
+                  <div>
+                    <h2 className={`text-[15px] font-semibold text-[#1d1d1f] tracking-tight`}>Evolución mensual</h2>
+                    <p className={`text-[13px] ${ts} mt-1`}>Desglose de los últimos {tendenciaConDetalle.length} meses</p>
+                  </div>
+                  <div className="flex items-center gap-4 bg-[#f5f5f7] px-3 py-1.5 rounded-full">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-[#ff9500]" />
+                      <span className="text-[11px] font-medium text-[#1d1d1f]">Luz</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-[#0071e3]" />
+                      <span className="text-[11px] font-medium text-[#1d1d1f]">Agua</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Área del gráfico */}
+                <div className="relative h-[180px] w-full flex">
+                  {/* Eje Y (Etiquetas) */}
+                  <div className="flex flex-col justify-between text-[10px] text-[#86868b] font-medium pr-4 pb-6 h-full text-right w-[40px] shrink-0">
+                    <span>{Math.ceil(maxTendencia)}</span>
+                    <span>{Math.ceil(maxTendencia * 0.66)}</span>
+                    <span>{Math.ceil(maxTendencia * 0.33)}</span>
+                    <span>0</span>
+                  </div>
+
+                  {/* Grid y Barras */}
+                  <div className="relative flex-1 h-full pb-6">
+                    {/* Líneas de referencia horizontales */}
+                    {[0, 33, 66, 100].map(pct => (
+                      <div key={pct} className="absolute left-0 right-0 w-full"
+                        style={{ bottom: `calc(${pct}% + 24px)`, borderTop: "1px dashed #e5e5ea" }} />
+                    ))}
+
+                    {/* Barras */}
+                    <div className="absolute inset-x-0 bottom-6 flex items-end justify-between px-2 h-[120px]">
+                      {tendenciaConDetalle.map((t, i) => {
+                        const MAX_PX  = 120; // altura máxima en px
+                        const luzPx   = t.luz  > 0 ? Math.max((t.luz  / maxTendencia) * MAX_PX, 4) : 0;
+                        const aguaPx  = t.agua > 0 ? Math.max((t.agua / maxTendencia) * MAX_PX, 4) : 0;
+                        const esMax   = t.mes === mesMasCaro.mes;
+                        
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                            {/* Tooltip */}
+                            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 ease-out">
+                              <div className="bg-[#1d1d1f] shadow-xl text-white px-3 py-2 rounded-[8px] whitespace-nowrap min-w-[100px]">
+                                <p className="text-[10px] text-[#86868b] font-semibold uppercase tracking-wider mb-1.5">
+                                  {new Date(t.mes + "-02").toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
+                                </p>
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between gap-3 text-[11px]">
+                                    <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-[#ff9500]"/><span>Luz</span></div>
+                                    <span className="font-medium">S/ {t.luz.toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-3 text-[11px]">
+                                    <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-[#0071e3]"/><span>Agua</span></div>
+                                    <span className="font-medium">S/ {t.agua.toFixed(2)}</span>
+                                  </div>
+                                  <div className="pt-1 mt-1 border-t border-white/10 flex items-center justify-between gap-3 text-[11px]">
+                                    <span className="text-[#86868b]">Total</span>
+                                    <span className="font-bold">S/ {t.total.toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Contenedor Hover */}
+                            <div className="absolute inset-y-0 w-full bg-black/[0.02] opacity-0 group-hover:opacity-100 transition-opacity rounded-[6px]" />
+
+                            {/* Par de barras */}
+                            <div className="relative z-10 w-full flex items-end justify-center gap-[2px] px-[10%]">
+                              {/* Luz */}
+                              <div
+                                className={`w-1/2 max-w-[14px] rounded-[3px] transition-all duration-300 ${esMax ? "bg-[#ff9500]" : "bg-[#ff9500]/40 group-hover:bg-[#ff9500]/70"}`}
+                                style={{ height: `${luzPx}px` }}
+                              />
+                              {/* Agua */}
+                              <div
+                                className={`w-1/2 max-w-[14px] rounded-[3px] transition-all duration-300 ${esMax ? "bg-[#0071e3]" : "bg-[#0071e3]/40 group-hover:bg-[#0071e3]/70"}`}
+                                style={{ height: `${aguaPx}px` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Etiquetas eje X */}
+                  <div className="absolute bottom-0 left-[40px] right-0 flex justify-between px-2">
+                    {tendenciaConDetalle.map((t, i) => (
+                      <div key={i} className="flex-1 text-center">
+                        <span className={`text-[10px] font-medium uppercase tracking-wider ${t.mes === mesMasCaro.mes ? "text-[#1d1d1f] font-bold" : "text-[#86868b]"}`}>
+                          {new Date(t.mes + "-02").toLocaleDateString("es-ES", { month: "short" })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Columna derecha */}
           <div className="col-span-12 md:col-span-3 flex flex-col gap-5">
-            {/* Calendario */}
-            <div className={`animate-fade-up delay-100 ${card}`}>
-              <div className="px-5 py-4 border-b border-black/[0.04]">
-                <div className="flex items-center justify-between">
-                  <button onClick={() => { const d = new Date(mesCalendario); d.setMonth(d.getMonth() - 1); setMesCalendario(d); }}
-                    className={`${ts} hover:bg-[#f5f5f7] p-1.5 rounded-[8px] transition-all`}>
-                    <ChevronRight className="w-4 h-4 rotate-180" />
-                  </button>
-                  <h3 className={`${tp} font-semibold text-[13px] capitalize`}>
-                    {mesCalendario.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
-                  </h3>
-                  <button onClick={() => { const d = new Date(mesCalendario); d.setMonth(d.getMonth() + 1); setMesCalendario(d); }}
-                    className={`${ts} hover:bg-[#f5f5f7] p-1.5 rounded-[8px] transition-all`}>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
+            {/* Cobertura del aÃ±o â€” meses con/sin datos */}
+            <div className={`animate-fade-up delay-100 ${card} p-5`}>
+              <div className="flex items-center gap-2 mb-4">
+                <CalendarCheck className="w-4 h-4 text-[#0071e3]" />
+                <h3 className={`font-semibold ${tp} text-[14px] tracking-tight`}>Cobertura {anioActual}</h3>
               </div>
-              <div className="p-4">
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {["D","L","M","M","J","V","S"].map((d, i) => (
-                    <div key={i} className="text-center text-[10px] font-semibold text-[#aeaeb2]">{d}</div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {generarCalendario().map((dia, i) => {
-                    const esHoy = dia === new Date().getDate() && mesCalendario.getMonth() === new Date().getMonth() && mesCalendario.getFullYear() === new Date().getFullYear();
-                    const tieneG = dia && tieneGastoEnMes(mesCalendario.getFullYear(), mesCalendario.getMonth());
-                    return (
-                      <div key={i} className={`aspect-square flex items-center justify-center text-[12px] rounded-[8px] font-medium transition-all
-                        ${!dia ? "invisible" : ""}
-                        ${esHoy ? "bg-[#0071e3] text-white" : ""}
-                        ${tieneG && !esHoy ? "bg-[#f5f5f7] text-[#1d1d1f] font-semibold" : ""}
-                        ${dia && !esHoy && !tieneG ? `${ts} hover:bg-[#f5f5f7]` : ""}
-                      `}>{dia}</div>
-                    );
-                  })}
-                </div>
-                <div className="mt-4 pt-3 border-t border-black/[0.04] space-y-1.5">
-                  <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#0071e3] rounded-[3px]" /><span className={`text-[11px] ${ts}`}>Hoy</span></div>
-                  <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#f5f5f7] border border-[#d1d1d6] rounded-[3px]" /><span className={`text-[11px] ${ts}`}>Con gastos</span></div>
-                </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {Array.from({ length: 12 }, (_, i) => {
+                  const key   = `${anioActual}-${String(i + 1).padStart(2, "0")}`;
+                  const tiene = mesesConDatos.has(key);
+                  const futuro = i > mesActualIdx;
+                  const nombre = new Date(`${anioActual}-${String(i + 1).padStart(2, "0")}-02`)
+                    .toLocaleDateString("es-ES", { month: "short" });
+                  return (
+                    <div key={i} className={`flex flex-col items-center gap-1 p-2 rounded-[10px] transition-all ${
+                      futuro  ? "opacity-30" :
+                      tiene   ? "bg-[#e8f5e9]" : "bg-amber-50"
+                    }`}>
+                      <div className={`w-2 h-2 rounded-full ${futuro ? "bg-[#d1d1d6]" : tiene ? "bg-[#34c759]" : "bg-amber-400"}`} />
+                      <span className={`text-[9px] font-semibold uppercase ${futuro ? ts : tiene ? "text-[#2e7d32]" : "text-amber-600"}`}>{nombre}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-3 pt-3 border-t border-black/[0.04] flex items-center justify-between">
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 bg-[#34c759] rounded-full" /><span className={`text-[10px] ${ts}`}>Con datos</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 bg-amber-400 rounded-full" /><span className={`text-[10px] ${ts}`}>Sin registro</span></div>
               </div>
             </div>
 
@@ -460,7 +612,7 @@ export default function Dashboard() {
                 <div className="w-2 h-2 bg-[#34c759] rounded-full animate-pulse" />
                 <span className="text-[11px] font-semibold text-white/50 uppercase tracking-widest">Sistema activo</span>
               </div>
-              <p className="text-[14px] font-medium text-white/90 leading-snug">Datos sincronizados y al día.</p>
+              <p className="text-[14px] font-medium text-white/90 leading-snug">Datos sincronizados y al dÃ­a.</p>
               <p className="text-[12px] text-white/35 mt-2">
                 {new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
               </p>
@@ -469,9 +621,11 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════
-          TAB 2 — HISTORIAL GENERAL
-      ══════════════════════════════════════════════════════ */}
+
+
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          TAB 2 â€” HISTORIAL GENERAL
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === "historial" && (() => {
         const gFiltrados = gastos.filter(g => filtroHistorial === "todos" || g.tipo === filtroHistorial);
         const mesesFiltrados = Array.from(new Set(gFiltrados.map(g => g.mes))).sort().reverse();
@@ -481,7 +635,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h2 className={`text-[20px] font-semibold ${tp} tracking-tight`}>Historial General</h2>
-                <p className={`text-[13px] ${ts} mt-0.5`}>{gFiltrados.length} registros · {mesesFiltrados.length} meses</p>
+                <p className={`text-[13px] ${ts} mt-0.5`}>{gFiltrados.length} registros Â· {mesesFiltrados.length} meses</p>
               </div>
               <div className="flex bg-[#e5e5ea] p-1 rounded-[10px] gap-0.5">
                 {(["todos", "luz", "agua"] as TipoFiltro[]).map(f => (
@@ -566,7 +720,7 @@ export default function Dashboard() {
                               </div>
                               <div className="text-right">
                                 <p className={`text-[16px] font-bold ${tp} tracking-tight`}>S/ {gasto.montoTotal.toFixed(2)}</p>
-                                <p className={`text-[11px] ${ts}`}>{gasto.consumoTotal.toFixed(1)} {gasto.tipo === "luz" ? "kWh" : "m³"}</p>
+                                <p className={`text-[11px] ${ts}`}>{gasto.consumoTotal.toFixed(1)} {gasto.tipo === "luz" ? "kWh" : "mÂ³"}</p>
                               </div>
                             </div>
                             {/* Desglose por local */}
@@ -598,9 +752,9 @@ export default function Dashboard() {
         );
       })()}
 
-      {/* ══════════════════════════════════════════════════════
-          TAB 3 — POR LOCAL
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          TAB 3 â€” POR LOCAL
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === "local" && (() => {
         const maxH     = Math.max(...histLocal.map(h => h.total), 1);
         const totalG   = histLocal.reduce((s, h) => s + h.total, 0);
@@ -612,7 +766,7 @@ export default function Dashboard() {
           <div className="animate-fade-up space-y-5">
             <div>
               <h2 className={`text-[20px] font-semibold ${tp} tracking-tight`}>Historial por Local</h2>
-              <p className={`text-[13px] ${ts} mt-0.5`}>Electricidad y agua — histórico completo</p>
+              <p className={`text-[13px] ${ts} mt-0.5`}>Electricidad y agua â€” histÃ³rico completo</p>
             </div>
 
             {/* Selector de local */}
@@ -629,7 +783,7 @@ export default function Dashboard() {
                     style={selected ? { backgroundColor: c.hex } : {}}>
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: selected ? "rgba(255,255,255,0.6)" : c.hex }} />
                     {l.nombre}
-                    {l.tipo === "casa" && <span className={`text-[10px] ${selected ? "opacity-60" : ts}`}>· Casa</span>}
+                    {l.tipo === "casa" && <span className={`text-[10px] ${selected ? "opacity-60" : ts}`}>Â· Casa</span>}
                   </button>
                 );
               })}
@@ -683,7 +837,7 @@ export default function Dashboard() {
                   <div className={card}>
                     <div className="px-6 py-5 border-b border-black/[0.04] flex items-center justify-between">
                       <div>
-                        <h3 className={`text-[15px] font-semibold ${tp} tracking-tight`}>Evolución mensual — {localObj.nombre}</h3>
+                        <h3 className={`text-[15px] font-semibold ${tp} tracking-tight`}>EvoluciÃ³n mensual â€” {localObj.nombre}</h3>
                         <p className={`text-[12px] ${ts} mt-0.5`}>Agua y luz por mes</p>
                       </div>
                       <div className="flex items-center gap-4">
@@ -754,9 +908,9 @@ export default function Dashboard() {
         );
       })()}
 
-      {/* ══════════════════════════════════════════════════════
-          TAB 4 — COMPARAR
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          TAB 4 â€” COMPARAR
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === "comparar" && (() => {
         const totalGlobal = comparacion.reduce((s, c) => s + c.total, 0);
         const getVal = (item: typeof comparacion[0]) =>
@@ -767,8 +921,8 @@ export default function Dashboard() {
         return (
           <div className="animate-fade-up space-y-5">
             <div>
-              <h2 className={`text-[20px] font-semibold ${tp} tracking-tight`}>Comparación entre Locales</h2>
-              <p className={`text-[13px] ${ts} mt-0.5`}>Todos los espacios — incluye casa y comerciales</p>
+              <h2 className={`text-[20px] font-semibold ${tp} tracking-tight`}>ComparaciÃ³n entre Locales</h2>
+              <p className={`text-[13px] ${ts} mt-0.5`}>Todos los espacios â€” incluye casa y comerciales</p>
             </div>
 
             {/* Controles */}
@@ -840,11 +994,11 @@ export default function Dashboard() {
                   })}
                 </div>
 
-                {/* Gráfico de barras comparativo */}
+                {/* GrÃ¡fico de barras comparativo */}
                 <div className={card}>
                   <div className="px-6 py-5 border-b border-black/[0.04]">
                     <h3 className={`text-[15px] font-semibold ${tp} tracking-tight capitalize`}>
-                      {filtroComparar === "todos" ? "Gasto total" : filtroComparar === "luz" ? "Electricidad" : "Agua"} — {mesComparar ? fmesLargo(mesComparar) : ""}
+                      {filtroComparar === "todos" ? "Gasto total" : filtroComparar === "luz" ? "Electricidad" : "Agua"} â€” {mesComparar ? fmesLargo(mesComparar) : ""}
                     </h3>
                     <p className={`text-[12px] ${ts} mt-0.5`}>Barras horizontales proporcionales al gasto</p>
                   </div>
