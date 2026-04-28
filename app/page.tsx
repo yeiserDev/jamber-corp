@@ -228,26 +228,29 @@ export default function Dashboard() {
     <DashboardLayout title="">
 
       {/* ── Tab bar ───────────────────────────────────────── */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex bg-[#e5e5ea] p-1 rounded-[14px] gap-0.5">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-[11px] text-[13px] font-medium transition-all whitespace-nowrap ${
-                activeTab === t.id
-                  ? "bg-white text-[#1d1d1f] shadow-[0_1px_4px_rgba(0,0,0,0.1)]"
-                  : "text-[#6e6e73] hover:text-[#1d1d1f]"
-              }`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
+      <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Tabs: scroll horizontal en móvil */}
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="flex bg-[#e5e5ea] p-1 rounded-[14px] gap-0.5 w-max">
+            {TABS.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-[11px] text-[11px] sm:text-[12px] font-medium transition-all whitespace-nowrap ${
+                  activeTab === t.id
+                    ? "bg-white text-[#1d1d1f] shadow-[0_1px_4px_rgba(0,0,0,0.1)]"
+                    : "text-[#6e6e73] hover:text-[#1d1d1f]"
+                }`}
+              >
+                {t.icon}
+                <span className="hidden xs:inline sm:inline">{t.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
         <Link
           href="/gastos"
-          className="flex items-center gap-2 px-4 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-[12px] text-[13px] font-semibold transition-all"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-[12px] text-[13px] font-semibold transition-all w-full sm:w-auto"
         >
           <Receipt className="w-3.5 h-3.5" />
           Gestionar Gastos
@@ -258,40 +261,40 @@ export default function Dashboard() {
           TAB 1 — RESUMEN
       ══════════════════════════════════════════════════════ */}
       {activeTab === "resumen" && (
-        <div className="grid grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
           {/* Columna principal */}
-          <div className="col-span-9 flex flex-col gap-5">
+          <div className="col-span-12 md:col-span-9 flex flex-col gap-5">
 
             {/* Hero */}
             <div className={`animate-fade-up delay-0 ${card}`}>
-              <div className="p-6 flex items-center justify-between">
+              <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="bg-[#1d1d1f] p-3 rounded-[14px]">
                     <Building2 className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className={`text-[22px] font-semibold ${tp} tracking-tight`}>Panel de Control</h1>
+                    <h1 className={`text-[18px] sm:text-[22px] font-semibold ${tp} tracking-tight`}>Panel de Control</h1>
                     <p className={`text-[13px] ${ts} capitalize mt-0.5`}>{mesNombre}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between sm:justify-end gap-4">
                   <div className="text-right">
                     <p className={`${lbl} mb-1`}>Total del Mes</p>
-                    <p className={`text-[32px] font-bold ${tp} tracking-tight leading-none`}>
+                    <p className={`text-[26px] sm:text-[32px] font-bold ${tp} tracking-tight leading-none`}>
                       S/ {stats.totalActual.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <div className={`flex items-center gap-1.5 px-3 py-2 rounded-[12px] ${subiendo ? "bg-red-50 text-red-500" : "bg-[#e8f5e9] text-[#2e7d32]"}`}>
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-[12px] ${subiendo ? "bg-red-50 text-red-500" : "bg-[#e8f5e9] text-[#2e7d32]"}`}>
                     {subiendo ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                    <span className="text-[14px] font-semibold">{Math.abs(stats.cambio).toFixed(1)}%</span>
-                    <span className="text-[12px] opacity-60">vs anterior</span>
+                    <span className="text-[13px] sm:text-[14px] font-semibold">{Math.abs(stats.cambio).toFixed(1)}%</span>
+                    <span className="hidden sm:inline text-[12px] opacity-60">vs anterior</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Stat cards */}
-            <div className="grid grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
               <div className={`animate-fade-up delay-100 ${cardHover} p-6`}>
                 <div className="flex items-center justify-between mb-5">
                   <div className="bg-amber-50 p-3 rounded-[12px]"><Zap className="w-5 h-5 text-amber-500" /></div>
@@ -386,7 +389,7 @@ export default function Dashboard() {
           </div>
 
           {/* Columna derecha */}
-          <div className="col-span-3 flex flex-col gap-5">
+          <div className="col-span-12 md:col-span-3 flex flex-col gap-5">
             {/* Calendario */}
             <div className={`animate-fade-up delay-100 ${card}`}>
               <div className="px-5 py-4 border-b border-black/[0.04]">
@@ -567,7 +570,7 @@ export default function Dashboard() {
                               </div>
                             </div>
                             {/* Desglose por local */}
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                               {locals.map(c => {
                                 const col = colorLocal(c.localId.nombre, c.localId.tipo);
                                 const pct = gasto.montoTotal > 0 ? ((c.monto / gasto.montoTotal) * 100).toFixed(0) : "0";
@@ -640,7 +643,7 @@ export default function Dashboard() {
             ) : (
               <>
                 {/* Cards resumen del local */}
-                <div className="grid grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
                   <div className={`${card} p-6`}>
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cActual?.hex }} />

@@ -23,63 +23,94 @@ export default function Sidebar() {
 
   const isActive = (path: string) => pathname === path;
 
+  const navItems = [
+    { href: "/",       label: "Dashboard",        icon: <LayoutDashboard className="w-[18px] h-[18px] flex-shrink-0" /> },
+    { href: "/gastos", label: "Gastos de Locales", icon: <Receipt         className="w-[18px] h-[18px] flex-shrink-0" /> },
+  ];
+
   return (
-    <aside className="w-60 bg-[#1d1d1f] text-white flex flex-col flex-shrink-0 h-full rounded-[22px] mr-3">
-      {/* Logo */}
-      <div className="px-6 pt-8 pb-6">
-        <h1 className="text-[17px] font-semibold tracking-tight text-white">
-          Jamber Corp
-        </h1>
-        <p className="text-[12px] text-white/40 mt-0.5 font-medium">Gestión de Locales</p>
-      </div>
+    <>
+      {/* ── Sidebar — solo visible en md+ ─────────────────── */}
+      <aside className="hidden md:flex w-60 bg-[#1d1d1f] text-white flex-col flex-shrink-0 h-full rounded-[22px] mr-3">
+        {/* Logo */}
+        <div className="px-6 pt-8 pb-6">
+          <h1 className="text-[17px] font-semibold tracking-tight text-white">
+            Jamber Corp
+          </h1>
+          <p className="text-[12px] text-white/40 mt-0.5 font-medium">Gestión de Locales</p>
+        </div>
 
-      {/* Nav principal */}
-      <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto pb-4">
-        <Link
-          href="/"
-          className={`flex items-center gap-3 px-4 py-2.5 rounded-[12px] transition-all text-[14px] font-medium ${
-            isActive("/")
-              ? "bg-white/10 text-white"
-              : "text-white/50 hover:text-white hover:bg-white/[0.06]"
-          }`}
-        >
-          <LayoutDashboard className="w-[18px] h-[18px] flex-shrink-0" />
-          <span>Dashboard</span>
-          {isActive("/") && (
-            <span className="ml-auto bg-[#0071e3] text-white text-[11px] font-semibold px-2 py-0.5 rounded-full">
-              2
+        {/* Nav principal */}
+        <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto pb-4">
+          {navItems.map(({ href, label, icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-[12px] transition-all text-[14px] font-medium ${
+                isActive(href)
+                  ? "bg-white/10 text-white"
+                  : "text-white/50 hover:text-white hover:bg-white/[0.06]"
+              }`}
+            >
+              {icon}
+              <span>{label}</span>
+              {isActive(href) && href === "/" && (
+                <span className="ml-auto bg-[#0071e3] text-white text-[11px] font-semibold px-2 py-0.5 rounded-full">
+                  2
+                </span>
+              )}
+            </Link>
+          ))}
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-white/50 hover:text-white hover:bg-white/[0.06] rounded-[12px] transition-all text-[14px] font-medium"
+          >
+            <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
+            <span>Cerrar Sesión</span>
+          </button>
+        </nav>
+
+        {/* Footer del sidebar */}
+        <div className="px-5 pb-6">
+          <div className="flex items-center gap-2 p-3 rounded-[12px] bg-white/[0.04]">
+            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+            <span className="text-[12px] text-white/40 font-medium">Sistema activo</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Bottom Navigation — solo visible en móvil (<md) ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#1d1d1f]/95 backdrop-blur-xl border-t border-white/[0.08] flex items-stretch safe-area-bottom">
+        {navItems.map(({ href, label, icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all ${
+              isActive(href)
+                ? "text-white"
+                : "text-white/40 active:text-white/70"
+            }`}
+          >
+            <span className={`transition-transform ${isActive(href) ? "scale-110" : "scale-100"}`}>
+              {icon}
             </span>
-          )}
-        </Link>
+            <span className="text-[10px] font-semibold tracking-tight">{label.split(" ")[0]}</span>
+            {isActive(href) && (
+              <span className="absolute bottom-1.5 w-1 h-1 bg-[#0071e3] rounded-full" />
+            )}
+          </Link>
+        ))}
 
-        <Link
-          href="/gastos"
-          className={`flex items-center gap-3 px-4 py-2.5 rounded-[12px] transition-all text-[14px] font-medium ${
-            isActive("/gastos")
-              ? "bg-white/10 text-white"
-              : "text-white/50 hover:text-white hover:bg-white/[0.06]"
-          }`}
-        >
-          <Receipt className="w-[18px] h-[18px] flex-shrink-0" />
-          <span>Gastos de Locales</span>
-        </Link>
-
+        {/* Logout */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-white/50 hover:text-white hover:bg-white/[0.06] rounded-[12px] transition-all text-[14px] font-medium"
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-white/40 active:text-white/70 transition-all"
         >
-          <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
-          <span>Cerrar Sesión</span>
+          <LogOut className="w-[18px] h-[18px]" />
+          <span className="text-[10px] font-semibold tracking-tight">Salir</span>
         </button>
       </nav>
-
-      {/* Footer del sidebar */}
-      <div className="px-5 pb-6">
-        <div className="flex items-center gap-2 p-3 rounded-[12px] bg-white/[0.04]">
-          <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-          <span className="text-[12px] text-white/40 font-medium">Sistema activo</span>
-        </div>
-      </div>
-    </aside>
+    </>
   );
 }

@@ -264,20 +264,20 @@ export default function GastosPage() {
       <Toaster position="top-right" toastOptions={{ style: { borderRadius: "14px", fontSize: "13px", fontFamily: "var(--font-inter)", color: "#1d1d1f" } }} />
 
       {/* ── Header ─────────────────────────────────────── */}
-      <div className={`animate-fade-up delay-0 ${card} p-5 mb-5`}>
-        <div className="flex items-center justify-between">
+      <div className={`animate-fade-up delay-0 ${card} p-4 sm:p-5 mb-5`}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-4">
             <div className="bg-[#1d1d1f] p-3 rounded-[14px]">
               <Receipt className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className={`text-[20px] font-semibold ${tp} tracking-tight`}>Gestión de Gastos</h1>
-              <p className={`text-[13px] ${ts} mt-0.5`}>Agua y luz · {gastos.length} registros totales</p>
+              <h1 className={`text-[18px] sm:text-[20px] font-semibold ${tp} tracking-tight`}>Gestión de Gastos</h1>
+              <p className={`text-[12px] sm:text-[13px] ${ts} mt-0.5`}>Agua y luz · {gastos.length} registros totales</p>
             </div>
           </div>
           <button
             onClick={() => { setPasoModal(1); setShowNuevoGasto(true); }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#006edb] text-white text-[13px] font-semibold rounded-[12px] transition-all shadow-[0_2px_8px_rgba(0,113,227,0.25)]"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0071e3] hover:bg-[#0077ed] active:bg-[#006edb] text-white text-[13px] font-semibold rounded-[12px] transition-all shadow-[0_2px_8px_rgba(0,113,227,0.25)] w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             Nuevo Registro
@@ -286,7 +286,7 @@ export default function GastosPage() {
       </div>
 
       {/* ── KPI Cards ──────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         {[
           { label: "Último Mes",    value: `S/ ${totalUltimoMes.toFixed(2)}`, icon: <Receipt  className="w-5 h-5 text-[#6e6e73]" />, bg: "bg-[#f5f5f7]",  delay: "delay-50"  },
           { label: "Promedio Luz",  value: `S/ ${promedioLuz.toFixed(2)}`,   icon: <Zap      className="w-5 h-5 text-amber-500" />, bg: "bg-amber-50",   delay: "delay-100" },
@@ -393,8 +393,8 @@ export default function GastosPage() {
                   </div>
                 </div>
 
-                {/* Grid de tarjetas — 2 columnas */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Grid de tarjetas — 1 col móvil, 2 cols sm+ */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {gastosMes.map(gasto => (
                     <GastoCard
                       key={gasto._id}

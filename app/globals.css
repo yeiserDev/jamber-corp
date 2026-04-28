@@ -3,6 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Breakpoint personalizado xs (480px) ───────────────── */
+@theme {
+  --breakpoint-xs: 30rem; /* 480px */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -197,3 +202,8 @@
 .overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
 .overflow-y-auto::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 99px; }
 .overflow-y-auto::-webkit-scrollbar-thumb:hover { background: #aeaeb2; }
+
+/* Safe-area para bottom nav en iPhone (notch / dynamic island) */
+.safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}

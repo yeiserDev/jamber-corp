@@ -54,11 +54,11 @@ export default function GastoCard({
   const ts = "text-[#6e6e73]";
 
   return (
-    <div className="bg-white rounded-[18px] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all overflow-hidden flex flex-col">
+    <div className="w-full sm:w-auto bg-white/80 backdrop-blur-lg rounded-[18px] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all overflow-hidden flex flex-col">
 
       {/* ── Encabezado ─────────────────────────────────── */}
       <div className="p-5 pb-4">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row items-start justify-between">
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-[12px] ${isLuz ? "bg-amber-50" : "bg-sky-50"}`}>
               {isLuz
