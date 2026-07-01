@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import Gasto from '@/lib/models/Gasto';
+import '@/lib/models/Local';
 
 // GET - Obtener todos los gastos
 export async function GET(request: Request) {
