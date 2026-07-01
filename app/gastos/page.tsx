@@ -433,7 +433,7 @@ export default function GastosPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div className="flex bg-white p-1.5 rounded-[12px] border border-gray-200 shadow-sm gap-1">
             {([
-              { key: "todos", label: "Todos" },
+              { key: "todos", label: "Todos", icon: undefined },
               { key: "luz", label: "Electricidad", icon: <Zap className="w-3.5 h-3.5" /> },
               { key: "agua", label: "Agua", icon: <Droplets className="w-3.5 h-3.5" /> }
             ] as const).map(f => (
