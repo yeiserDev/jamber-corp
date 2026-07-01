@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import Gasto from '@/lib/models/Gasto';
 import '@/lib/models/Local';
+import User from '@/lib/models/User';
+import { cookies } from 'next/headers';
 
 // GET - Obtener todos los gastos
 export async function GET(request: Request) {
@@ -38,6 +40,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await dbConnect();
+
+    // Verificación de Admin
+    const cookieStore = await cookies();
+    const userId = cookieStore.get('auth-session')?.value;
+    if (!userId) {
+      return NextResponse.json({ success: false, message: 'No autenticado' }, { status: 401 });
+    }
+    const user = await User.findById(userId);
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ success: false, message: 'No tienes permisos de administrador' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const { mes, tipo, consumoTotal, montoTotal, lecturas, cargoFijo, igv, otrosCargos } = body;

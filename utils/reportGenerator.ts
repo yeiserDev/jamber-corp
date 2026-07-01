@@ -22,419 +22,370 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
     };
 
     const costoPorUnidad = calcularCostoPorUnidad(gasto);
-    const fecha = new Date().toLocaleDateString('es-PE', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+    const fecha = new Date().toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
+    const isLuz = gasto.tipo === 'luz';
+    const unit = isLuz ? 'kWh' : 'm³';
 
-    // Filtrar solo los locales que NO son casa
     const localesACobrar = gasto.costosPorLocal.filter(c => {
         const local = typeof c.localId === 'string' ? locales.find(l => l._id === c.localId) : c.localId;
         return local && local.tipo !== 'casa';
-    });
-    const totalACobrar = localesACobrar.reduce((sum, c) => sum + c.monto, 0);
+    }).sort((a, b) => b.monto - a.monto);
 
-    // Filtrar historial
     const historial = todosGastos
         .filter(g => g.tipo === gasto.tipo)
         .sort((a, b) => a.mes.localeCompare(b.mes))
-        .slice(-6); // Últimos 6 meses
+        .slice(-6);
 
-    // Crear canvas
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
 
-    // Dimensiones
-    let cardHeight = 480 + (localesACobrar.length * 90) + 100;
-    if (historial.length > 0) {
-        cardHeight += 380; // Espacio extra para el gráfico
-    }
+    // Height calculation
+    const headerHeight = 220;
+    const cardTop = 150;
+    const metricsHeight = 120;
+    const rowHeight = 45;
+    const distribucionHeight = 60 + (localesACobrar.length * rowHeight);
+    const chartHeight = historial.length > 0 ? 300 : 0;
+    const footerHeight = 100;
 
-    const cardWidth = 700;
-    canvas.width = cardWidth;
-    canvas.height = cardHeight;
+    const cardHeight = metricsHeight + distribucionHeight + chartHeight + 100;
+    const totalHeight = cardTop + cardHeight + footerHeight;
+    const canvasWidth = 800;
 
-    // Colores del nuevo diseño
+    canvas.width = canvasWidth;
+    canvas.height = totalHeight;
+
     const colors = {
-        primary: '#0B253C',
-        primaryLight: '#0A2640',
-        bg: '#FFFFFF',
-        bgGray: '#F8FAFC',
-        bgSlate: '#F1F5F9',
-        text: '#0B253C',
-        textGray: '#64748B',
-        textLight: '#94A3B8',
-        textMedium: '#64748B',
-        success: '#10B981',
-        logo: '#E6E9EB',
-        border: '#E2E8F0',
-        borderLight: '#F1F5F9'
+        bg: '#f8fafc',
+        cardBg: '#ffffff',
+        textMain: '#0f172a',
+        textMuted: '#64748b',
+        textLight: '#94a3b8',
+        border: '#e2e8f0',
+        primary: isLuz ? '#d97706' : '#0284c7', // amber-600 / sky-600
+        primaryLight: isLuz ? '#fef3c7' : '#e0f2fe',
     };
 
-    // Fondo blanco
+    const fontBase = 'system-ui, -apple-system, sans-serif';
+
+    // 1. Draw Background
     ctx.fillStyle = colors.bg;
-    ctx.fillRect(0, 0, cardWidth, cardHeight);
+    ctx.fillRect(0, 0, canvasWidth, totalHeight);
 
-    // Borde exterior con sombra
-    ctx.strokeStyle = colors.border;
-    ctx.lineWidth = 1;
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
-    ctx.shadowBlur = 25;
-    ctx.shadowOffsetY = 8;
-    roundRect(ctx, 0, 0, cardWidth, cardHeight, 4);
-    ctx.stroke();
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
+    // 2. Draw SVG Banner
+    const svgLuz = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 120" width="800" height="220" preserveAspectRatio="xMidYMax slice">
+        <path d="M460,40 Q460,32 468,32 Q473,26 482,32 Q495,32 495,43 L460,43 Z" fill="#f1f5f9" />
+        <path d="M160,50 Q160,45 165,45 Q170,40 176,45 Q185,45 185,52 L160,52 Z" fill="#f1f5f9" />
+        <circle cx="420" cy="50" r="16" fill="#fcd34d" />
+        <rect x="0" y="105" width="600" height="15" fill="#f8fafc" />
+        <rect x="0" y="105" width="600" height="2" fill="#f1f5f9" />
+        <g stroke="#cbd5e1" stroke-width="1.5" fill="none" transform="translate(60, 0)">
+            <path d="M50,105 L65,35 L80,105" />
+            <path d="M40,55 L90,55" />
+            <path d="M45,75 L85,75" />
+            <path d="M56,80 L72,105 M74,80 L58,105" />
+            <path d="M60,55 L70,75 M70,55 L60,75" />
+            <path d="M62,35 L68,55 M68,35 L62,55" />
+            <line x1="65" y1="20" x2="65" y2="35" />
+            <line x1="55" y1="35" x2="75" y2="35" />
+        </g>
+        <g stroke="#e2e8f0" stroke-width="1" fill="none" transform="translate(120, 25) scale(0.7)">
+            <path d="M50,115 L65,45 L80,115" />
+            <path d="M40,65 L90,65" />
+            <path d="M45,85 L85,85" />
+            <path d="M56,90 L72,115 M74,90 L58,115" />
+            <path d="M60,65 L70,85 M70,65 L60,85" />
+            <path d="M62,45 L68,65 M68,45 L62,65" />
+            <line x1="65" y1="30" x2="65" y2="45" />
+            <line x1="55" y1="45" x2="75" y2="45" />
+        </g>
+        <circle cx="235" cy="95" r="10" fill="#a7f3d0" />
+        <circle cx="250" cy="100" r="7" fill="#86efac" />
+        <g transform="translate(225, 65)">
+            <rect x="18" y="30" width="3" height="15" fill="#94a3b8" />
+            <polygon points="0,30 25,30 35,0 10,0" fill="#3b82f6" />
+            <line x1="6" y1="10" x2="31" y2="10" stroke="#bfdbfe" stroke-width="0.5" />
+            <line x1="12" y1="20" x2="37" y2="20" stroke="#bfdbfe" stroke-width="0.5" />
+            <line x1="18" y1="0" x2="8" y2="30" stroke="#bfdbfe" stroke-width="0.5" />
+            <line x1="26" y1="0" x2="16" y2="30" stroke="#bfdbfe" stroke-width="0.5" />
+        </g>
+        <g transform="translate(265, 70) scale(0.85)">
+            <rect x="18" y="30" width="3" height="15" fill="#94a3b8" />
+            <polygon points="0,30 25,30 35,0 10,0" fill="#3b82f6" />
+            <line x1="6" y1="10" x2="31" y2="10" stroke="#bfdbfe" stroke-width="0.5" />
+            <line x1="12" y1="20" x2="37" y2="20" stroke="#bfdbfe" stroke-width="0.5" />
+            <line x1="18" y1="0" x2="8" y2="30" stroke="#bfdbfe" stroke-width="0.5" />
+            <line x1="26" y1="0" x2="16" y2="30" stroke="#bfdbfe" stroke-width="0.5" />
+        </g>
+        <circle cx="105" cy="100" r="8" fill="#4ade80" />
+        <circle cx="95" cy="98" r="12" fill="#86efac" />
+        <g transform="translate(370, 75)">
+            <circle cx="-15" cy="25" r="8" fill="#6ee7b7" />
+            <circle cx="-5" cy="20" r="12" fill="#34d399" />
+            <rect x="0" y="0" width="70" height="30" fill="#e2e8f0" />
+            <polygon points="70,0 85,5 85,30 70,30" fill="#cbd5e1" />
+            <rect x="0" y="0" width="70" height="6" fill="#3b82f6" />
+            <polygon points="70,0 85,5 85,11 70,6" fill="#2563eb" />
+            <rect x="5" y="12" width="12" height="10" fill="#93c5fd" />
+            <rect x="22" y="12" width="25" height="10" fill="#60a5fa" />
+            <rect x="52" y="12" width="12" height="10" fill="#93c5fd" />
+        </g>
+        <circle cx="480" cy="100" r="10" fill="#10b981" />
+        <path d="M510,70 L500,105 L520,105 Z" fill="#059669" />
+    </svg>`;
 
-    let yPos = 60;
+    const svgAgua = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 120" width="800" height="220" preserveAspectRatio="xMidYMax slice">
+        <path d="M0,80 C60,80 90,60 150,60 C210,60 240,85 300,85 C360,85 390,70 450,70 C510,70 540,90 600,90 L600,120 L0,120 Z" fill="#e0f2fe" />
+        <path d="M0,95 C75,95 105,75 180,75 C255,75 285,95 360,95 C435,95 465,80 540,80 C570,80 585,90 600,90 L600,120 L0,120 Z" fill="#bae6fd" opacity="0.6" />
+        <path d="M0,105 C90,105 120,90 210,90 C300,90 330,105 420,105 C510,105 540,95 600,95 L600,120 L0,120 Z" fill="#7dd3fc" opacity="0.4" />
+        <g transform="translate(282, 32)">
+            <path d="M18,0 C18,0 0,26 0,39 C0,48.9 8.1,57 18,57 C27.9,57 36,48.9 36,39 C36,26 18,0 18,0 Z" fill="#3b82f6" />
+            <path d="M28,38 C28,45 22,51 15,52 C21,52 26,46 26,38 C26,27 19,13 19,13 C19,13 28,26 28,38 Z" fill="#93c5fd" opacity="0.8"/>
+        </g>
+    </svg>`;
 
-    // ========== TÍTULO DEL SERVICIO CON ICONO ==========
-    const icon = gasto.tipo === 'luz' ? '⚡' : '💧';
-    ctx.font = '38px Arial';
-    ctx.fillStyle = colors.primary;
-    ctx.fillText(icon, 50, yPos);
+    const svgString = isLuz ? svgLuz : svgAgua;
 
-    ctx.font = 'bold 40px Arial';
-    ctx.fillStyle = colors.primary;
-    ctx.fillText(gasto.tipo === 'luz' ? 'Luz' : 'Agua', 100, yPos);
+    // Draw banner background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, headerHeight);
+    if (isLuz) {
+        gradient.addColorStop(0, '#fffbeb');
+        gradient.addColorStop(1, '#fef3c7');
+    } else {
+        gradient.addColorStop(0, '#f0f9ff');
+        gradient.addColorStop(1, '#e0f2fe');
+    }
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvasWidth, headerHeight);
 
-    ctx.font = '16px Arial';
-    ctx.fillStyle = colors.textLight;
-    ctx.fillText(gasto.mes, 100, yPos + 24);
-
-    yPos += 65;
-
-    // ========== RESUMEN FINANCIERO ==========
-    ctx.font = 'bold 16px Arial';
-    ctx.fillStyle = colors.primary;
-    ctx.fillText('Resumen Financiero', 50, yPos);
-
-    yPos += 30;
-
-    // Fondo slate para el resumen
-    ctx.fillStyle = colors.bgSlate;
-    roundRect(ctx, 50, yPos - 15, cardWidth - 100, 130, 10);
-    ctx.fill();
-
-    // Borde del resumen
-    ctx.strokeStyle = colors.borderLight;
-    ctx.lineWidth = 1;
-    roundRect(ctx, 50, yPos - 15, cardWidth - 100, 130, 10);
-    ctx.stroke();
-
-    // Primera línea: Consumo Total (con fondo slate)
-    ctx.fillStyle = colors.bgSlate;
-    ctx.fillRect(50, yPos - 15, cardWidth - 100, 40);
-
-    ctx.strokeStyle = colors.borderLight;
-    ctx.beginPath();
-    ctx.moveTo(50, yPos + 25);
-    ctx.lineTo(cardWidth - 50, yPos + 25);
-    ctx.stroke();
-
-    ctx.font = '14px Arial';
-    ctx.fillStyle = colors.textGray;
-    ctx.fillText('Consumo Total', 65, yPos + 7);
-
-    ctx.font = 'bold 14px Arial';
-    ctx.fillStyle = colors.text;
-    ctx.textAlign = 'right';
-    ctx.fillText(`${gasto.consumoTotal.toFixed(2)} ${gasto.tipo === 'luz' ? 'kWh' : 'm³'}`, cardWidth - 65, yPos + 7);
-    ctx.textAlign = 'left';
-
-    // Segunda línea: Monto Total (destacado)
-    yPos += 40;
-
-    ctx.fillStyle = colors.bg;
-    ctx.fillRect(50, yPos - 15, cardWidth - 100, 45);
-
-    ctx.strokeStyle = colors.borderLight;
-    ctx.beginPath();
-    ctx.moveTo(50, yPos + 30);
-    ctx.lineTo(cardWidth - 50, yPos + 30);
-    ctx.stroke();
-
-    ctx.font = 'bold 14px Arial';
-    ctx.fillStyle = colors.primary;
-    ctx.fillText('Monto Total', 65, yPos + 10);
-
-    ctx.font = 'bold 20px Arial';
-    ctx.fillStyle = colors.primary;
-    ctx.textAlign = 'right';
-    ctx.fillText(`S/ ${gasto.montoTotal.toFixed(2)}`, cardWidth - 65, yPos + 12);
-    ctx.textAlign = 'left';
-
-    // Tercera línea: Tarifa (con fondo slate)
-    yPos += 45;
-
-    ctx.fillStyle = colors.bgSlate;
-    ctx.fillRect(50, yPos - 15, cardWidth - 100, 40);
-
-    ctx.font = '12px Arial';
-    ctx.fillStyle = colors.textGray;
-    ctx.fillText(`Tarifa por ${gasto.tipo === 'luz' ? 'kWh' : 'm³'}`, 65, yPos + 7);
-
-    ctx.font = '12px Arial';
-    ctx.fillStyle = colors.textGray;
-    ctx.textAlign = 'right';
-    ctx.fillText(`S/ ${costoPorUnidad.toFixed(4)}`, cardWidth - 65, yPos + 7);
-    ctx.textAlign = 'left';
-
-    yPos += 50;
-
-    // ========== DISTRIBUCIÓN POR LOCAL ==========
-    ctx.font = 'bold 16px Arial';
-    ctx.fillStyle = colors.primary;
-    ctx.fillText('Distribución por Local', 50, yPos);
-
-    yPos += 30;
-
-    // Tarjetas de locales
-    localesACobrar.forEach((costo: any, idx: number) => {
-        const localIdStr = typeof costo.localId === 'string' ? costo.localId : costo.localId._id;
-        const lecturasLocal = gasto.lecturas.filter((l: any) => {
-            const lId = typeof l.localId === 'string' ? l.localId : l.localId._id;
-            return lId === localIdStr;
-        });
-
-        const isMultiMedidor = lecturasLocal.length > 1;
-        const localCardHeight = isMultiMedidor ? 80 + (lecturasLocal.length * 20) : 80;
-
-        // Fondo de la tarjeta
-        ctx.fillStyle = colors.bg;
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
-        ctx.shadowBlur = 12;
-        ctx.shadowOffsetY = 4;
-        roundRect(ctx, 50, yPos - 10, cardWidth - 100, localCardHeight, 12);
-        ctx.fill();
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-
-        // Borde de la tarjeta
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = 1;
-        roundRect(ctx, 50, yPos - 10, cardWidth - 100, localCardHeight, 12);
-        ctx.stroke();
-
-        // Número circular
-        ctx.fillStyle = colors.primary;
-        ctx.shadowColor = 'rgba(11, 37, 60, 0.2)';
-        ctx.shadowBlur = 8;
-        ctx.beginPath();
-        ctx.arc(85, yPos + 30, 20, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-
-        ctx.font = 'bold 18px Arial';
-        ctx.fillStyle = colors.bg;
-        ctx.textAlign = 'center';
-        ctx.fillText(`${idx + 1}`, 85, yPos + 37);
-        ctx.textAlign = 'left';
-
-        // Info del local
-        const localObj = typeof costo.localId === 'string' ? locales.find(l => l._id === costo.localId) : costo.localId;
-        const nombreLocal = localObj ? localObj.nombre : 'Local';
-        const tipoLocal = localObj ? localObj.tipo : '';
-
-        ctx.font = 'bold 16px Arial';
-        ctx.fillStyle = colors.primary;
-        ctx.fillText(nombreLocal.toLowerCase().includes('academia') ? 'Profesor' : nombreLocal, 120, yPos + 18);
-
-        // Tipo del local
-        ctx.font = '12px Arial';
-        ctx.fillStyle = colors.textGray;
-        ctx.fillText(`Tipo: ${tipoLocal.charAt(0).toUpperCase() + tipoLocal.slice(1)}`, 120, yPos + 36);
-
-        // Consumo
-        if (isMultiMedidor) {
-            let currentY = yPos + 51;
-            lecturasLocal.forEach((lectura: any) => {
-                ctx.font = '11px Arial';
-                ctx.fillStyle = colors.textGray;
-                const costoMedidor = lectura.consumo * costoPorUnidad;
-                ctx.fillText(`Medidor ${lectura.medidorNumero || 1}: ${lectura.consumo.toFixed(2)} ${gasto.tipo === 'luz' ? 'kWh' : 'm³'} (S/ ${costoMedidor.toFixed(2)})`, 120, currentY);
-                currentY += 16;
-            });
-        } else {
-            ctx.font = '11px Arial';
-            ctx.fillStyle = colors.textGray;
-            ctx.fillText(`Consumo: ${costo.consumo.toFixed(2)} ${gasto.tipo === 'luz' ? 'kWh' : 'm³'}`, 120, yPos + 51);
-        }
-
-        // Monto
-        ctx.font = 'bold 24px Arial';
-        ctx.fillStyle = colors.success;
-        ctx.textAlign = 'right';
-        ctx.fillText(`S/ ${costo.monto.toFixed(2)}`, cardWidth - 70, yPos + 38);
-        ctx.textAlign = 'left';
-
-        yPos += localCardHeight + 10;
+    await new Promise<void>((resolve) => {
+        const img = new Image();
+        const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0, canvasWidth, headerHeight);
+            URL.revokeObjectURL(url);
+            resolve();
+        };
+        img.onerror = () => { resolve(); };
+        img.src = url;
     });
 
-    yPos += 20;
-
-    // ========== TOTAL A COBRAR ==========
-    ctx.fillStyle = colors.primary;
-    ctx.shadowColor = 'rgba(11, 37, 60, 0.15)';
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetY = 4;
-    roundRect(ctx, 50, yPos - 10, cardWidth - 100, 70, 10);
+    // 3. Draw Main Card
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetY = 15;
+    ctx.fillStyle = colors.cardBg;
+    roundRect(ctx, 40, cardTop, canvasWidth - 80, cardHeight, 24);
     ctx.fill();
     ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
 
-    ctx.font = 'bold 14px Arial';
-    ctx.fillStyle = colors.bg;
-    ctx.fillText('TOTAL A COBRAR', 70, yPos + 22);
+    let y = cardTop + 50;
+    const cardLeft = 90;
+    const innerWidth = canvasWidth - 180;
 
-    ctx.font = 'bold 30px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(`S/ ${totalACobrar.toFixed(2)}`, cardWidth - 70, yPos + 26);
-    ctx.textAlign = 'left';
+    // --- CARD HEADER ---
+    ctx.font = `bold 32px ${fontBase}`;
+    ctx.fillStyle = colors.textMain;
+    ctx.fillText(`Reporte de ${isLuz ? 'Electricidad' : 'Agua'}`, cardLeft, y);
+    
+    ctx.font = `600 16px ${fontBase}`;
+    ctx.fillStyle = colors.primary;
+    const mesStr = gasto.mes.toUpperCase();
+    const textWidth = ctx.measureText(mesStr).width;
+    
+    // Tag background for month
+    ctx.fillStyle = colors.primaryLight;
+    roundRect(ctx, cardLeft + innerWidth - textWidth - 24, y - 24, textWidth + 24, 32, 16);
+    ctx.fill();
+    
+    ctx.fillStyle = colors.primary;
+    ctx.fillText(mesStr, cardLeft + innerWidth - textWidth - 12, y - 2);
 
-    yPos += 85;
+    y += 50;
 
-    // ========== GRÁFICO HISTÓRICO ==========
-    if (historial.length > 0) {
-        yPos += 20;
-
-        ctx.font = 'bold 16px Arial';
-        ctx.fillStyle = colors.primary;
-        ctx.fillText('Histórico por Local (Últimos 6 Meses)', 50, yPos);
-
-        yPos += 40;
-
-        // Identificar locales únicos
-        const localesIds = Array.from(new Set(historial.flatMap(h => h.costosPorLocal.filter(c => {
-            const local = typeof c.localId === 'string' ? locales.find(l => l._id === c.localId) : c.localId;
-            return local && local.tipo !== 'casa';
-        }).map(c => typeof c.localId === 'string' ? c.localId : c.localId._id))));
-
-        const localesInfo = localesIds.map(id => {
-            const local = locales.find(l => l._id === id);
-            let nombre = local?.nombre || 'Local';
-            if (nombre.toLowerCase() === 'academia') nombre = 'Profesor';
-            return { id, nombre, color: '' };
-        });
-
-        const chartColors = ['#0B253C', '#10B981', '#F59E0B', '#6366F1', '#EC4899'];
-        localesInfo.forEach((l, i) => l.color = chartColors[i % chartColors.length]);
-
-        // Leyenda
-        let legendX = 50;
-        localesInfo.forEach(local => {
-            ctx.fillStyle = local.color;
-            ctx.beginPath();
-            ctx.arc(legendX, yPos - 15, 6, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.font = '12px Arial';
-            ctx.fillStyle = colors.textGray;
-            ctx.textAlign = 'left';
-            ctx.fillText(local.nombre, legendX + 15, yPos - 11);
-
-            legendX += ctx.measureText(local.nombre).width + 40;
-        });
-
-        // Configuración del gráfico
-        const chartHeight = 250;
-        const chartWidth = cardWidth - 100;
-        const barWidth = 25;
-        const groupWidth = (barWidth * localesIds.length) + 15;
-        const totalGroupWidth = groupWidth + 20;
-        const gap = (chartWidth - (historial.length * totalGroupWidth)) / (historial.length + 1);
-
-        // Escala
-        let maxMonto = 0;
-        historial.forEach(h => {
-            h.costosPorLocal.forEach(c => {
-                const cLocalId = typeof c.localId === 'string' ? c.localId : c.localId._id;
-                if (localesIds.includes(cLocalId) && c.monto > maxMonto) maxMonto = c.monto;
-            });
-        });
-        maxMonto = maxMonto * 1.2 || 100;
-
-        // Fondo gráfico
-        ctx.fillStyle = colors.bgSlate;
-        roundRect(ctx, 50, yPos, chartWidth, chartHeight, 10);
-        ctx.fill();
-
-        // Líneas guía
-        ctx.strokeStyle = '#E2E8F0';
-        ctx.lineWidth = 1;
-        for (let i = 1; i <= 4; i++) {
-            const y = yPos + chartHeight - (i * (chartHeight / 5));
-            ctx.beginPath();
-            ctx.moveTo(50, y);
-            ctx.lineTo(50 + chartWidth, y);
-            ctx.stroke();
-
-            ctx.font = '10px Arial';
-            ctx.fillStyle = '#94A3B8';
-            ctx.fillText((maxMonto * (i / 5)).toFixed(0), 25, y + 3);
-        }
-
-        // Barras
-        historial.forEach((h, mesIndex) => {
-            const groupX = 50 + gap + (mesIndex * totalGroupWidth);
-
-            ctx.font = 'bold 11px Arial';
-            ctx.fillStyle = colors.text;
-            ctx.textAlign = 'center';
-            const mesNombre = new Date(h.mes + '-02').toLocaleDateString('es-ES', { month: 'short' });
-            ctx.fillText(mesNombre.toUpperCase(), groupX + (groupWidth / 2), yPos + chartHeight + 20);
-
-            localesIds.forEach((localId, localIndex) => {
-                const costo = h.costosPorLocal.find(c => {
-                    const cId = typeof c.localId === 'string' ? c.localId : c.localId._id;
-                    return cId === localId;
-                });
-                const monto = costo ? costo.monto : 0;
-
-                if (monto > 0) {
-                    const height = (monto / maxMonto) * chartHeight;
-                    const x = groupX + (localIndex * barWidth);
-                    const y = yPos + chartHeight - height;
-                    const color = localesInfo.find(l => l.id === localId)?.color || colors.primary;
-
-                    ctx.fillStyle = color;
-                    roundRect(ctx, x, y, barWidth - 4, height, 4);
-                    ctx.fill();
-
-                    if (costo) {
-                        const unit = gasto.tipo === 'luz' ? 'kWh' : 'm³';
-                        ctx.font = 'bold 8px Arial';
-                        ctx.fillStyle = colors.textMedium;
-                        ctx.textAlign = 'center';
-                        ctx.fillText(`${costo.consumo.toFixed(0)}`, x + ((barWidth - 4) / 2), y - 3);
-                    }
-                }
-            });
-        });
-
-        ctx.textAlign = 'left';
-        yPos += chartHeight + 40;
-    }
-
-    // ========== FOOTER ==========
-    ctx.fillStyle = colors.bgGray;
-    ctx.fillRect(0, yPos, cardWidth, cardHeight - yPos);
-
-    ctx.strokeStyle = colors.borderLight;
+    // --- DIVIDER ---
+    ctx.strokeStyle = colors.border;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, yPos);
-    ctx.lineTo(cardWidth, yPos);
+    ctx.moveTo(cardLeft, y);
+    ctx.lineTo(cardLeft + innerWidth, y);
     ctx.stroke();
 
-    ctx.font = '9px Arial';
+    y += 40;
+
+    // --- METRICS ROW ---
+    const metricWidth = innerWidth / 3;
+    
+    // Metric 1: Consumo
+    ctx.font = `500 13px ${fontBase}`;
+    ctx.fillStyle = colors.textMuted;
+    ctx.fillText('Consumo Total', cardLeft, y);
+    ctx.font = `bold 24px ${fontBase}`;
+    ctx.fillStyle = colors.textMain;
+    ctx.fillText(`${gasto.consumoTotal.toFixed(1)} ${unit}`, cardLeft, y + 30);
+
+    // Metric 2: Tarifa
+    ctx.font = `500 13px ${fontBase}`;
+    ctx.fillStyle = colors.textMuted;
+    ctx.fillText(`Tarifa por ${unit}`, cardLeft + metricWidth, y);
+    ctx.font = `bold 24px ${fontBase}`;
+    ctx.fillStyle = colors.textMain;
+    ctx.fillText(`S/ ${costoPorUnidad.toFixed(4)}`, cardLeft + metricWidth, y + 30);
+
+    // Metric 3: Monto Total
+    ctx.font = `bold 12px ${fontBase}`;
+    ctx.fillStyle = colors.textMuted;
+    ctx.fillText('TOTAL A COBRAR', cardLeft + metricWidth * 2, y);
+    ctx.font = `900 28px ${fontBase}`;
+    ctx.fillStyle = colors.primary;
+    ctx.fillText(`S/ ${gasto.montoTotal.toFixed(2)}`, cardLeft + metricWidth * 2, y + 30);
+
+    y += 80;
+
+    // --- DIVIDER ---
+    ctx.beginPath();
+    ctx.moveTo(cardLeft, y);
+    ctx.lineTo(cardLeft + innerWidth, y);
+    ctx.stroke();
+
+    y += 50;
+
+    // --- DISTRIBUCIÓN POR LOCAL ---
+    ctx.font = `bold 18px ${fontBase}`;
+    ctx.fillStyle = colors.textMain;
+    ctx.fillText('Distribución por local', cardLeft, y);
+    y += 35;
+
+    localesACobrar.forEach((c) => {
+        const local = typeof c.localId === 'string' ? locales.find(l => l._id === c.localId) : c.localId;
+        const nombre = local?.nombre || 'Local';
+        const monto = c.monto;
+        const pct = gasto.montoTotal > 0 ? (monto / gasto.montoTotal) * 100 : 0;
+        
+        // Dot
+        ctx.fillStyle = colors.primary;
+        ctx.beginPath();
+        ctx.arc(cardLeft + 6, y - 5, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Local Name
+        ctx.font = `600 15px ${fontBase}`;
+        ctx.fillStyle = colors.textMain;
+        ctx.fillText(nombre, cardLeft + 25, y);
+
+        // Local Name and Consumption
+        ctx.font = `600 15px ${fontBase}`;
+        ctx.fillStyle = colors.textMain;
+        ctx.fillText(nombre, cardLeft + 25, y);
+
+        const consumoStr = `${c.consumo.toFixed(1)} ${unit}`;
+        ctx.font = `500 13px ${fontBase}`;
+        ctx.fillStyle = colors.textMuted;
+        const nameWidth = ctx.measureText(nombre).width;
+        ctx.fillText(consumoStr, cardLeft + 25 + nameWidth + 10, y);
+
+        // Percentage & Amount
+        const pctStr = `${pct.toFixed(1)}%`;
+        ctx.font = `500 14px ${fontBase}`;
+        ctx.fillStyle = colors.textMuted;
+        const pctWidth = ctx.measureText(pctStr).width;
+        
+        const montoStr = `S/ ${monto.toFixed(2)}`;
+        ctx.font = `bold 14px ${fontBase}`;
+        const montoWidth = ctx.measureText(montoStr).width;
+        
+        const gapBetween = 30;
+        const totalRightWidth = pctWidth + gapBetween + montoWidth + 24; // 24 for padding
+        
+        ctx.fillText(pctStr, cardLeft + innerWidth - totalRightWidth, y);
+        
+        // Price Bubble
+        ctx.fillStyle = colors.bg; // Light grey bubble
+        roundRect(ctx, cardLeft + innerWidth - montoWidth - 24, y - 18, montoWidth + 24, 26, 8);
+        ctx.fill();
+        
+        ctx.fillStyle = colors.primary;
+        ctx.fillText(montoStr, cardLeft + innerWidth - montoWidth - 12, y);
+
+        // Progress Bar Background
+        ctx.fillStyle = colors.bg;
+        roundRect(ctx, cardLeft + 25, y + 12, innerWidth - 25, 6, 3);
+        ctx.fill();
+
+        // Progress Bar Fill
+        ctx.fillStyle = colors.primary;
+        roundRect(ctx, cardLeft + 25, y + 12, (innerWidth - 25) * (pct / 100), 6, 3);
+        ctx.fill();
+
+        y += rowHeight;
+    });
+
+    y += 30;
+
+    // --- HISTORIAL CHART ---
+    if (historial.length > 0) {
+        ctx.font = `bold 18px ${fontBase}`;
+        ctx.fillStyle = colors.textMain;
+        ctx.fillText('Historial de últimos meses', cardLeft, y);
+        y += 40;
+
+        const chartW = innerWidth;
+        const chartH = 180;
+        const maxH = Math.max(...historial.map(h => h.montoTotal)) * 1.2 || 100;
+
+        // Grid lines
+        ctx.strokeStyle = colors.border;
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+            const gy = y + chartH - (i * (chartH / 4));
+            ctx.beginPath();
+            ctx.moveTo(cardLeft, gy);
+            ctx.lineTo(cardLeft + chartW, gy);
+            ctx.stroke();
+
+            ctx.font = `12px ${fontBase}`;
+            ctx.fillStyle = colors.textLight;
+            ctx.fillText(`S/ ${(maxH * (i / 4)).toFixed(0)}`, cardLeft - 40, gy + 4);
+        }
+
+        // Bars
+        const barW = Math.min(40, (chartW / historial.length) - 20);
+        const gap = (chartW - (barW * historial.length)) / (historial.length + 1);
+
+        historial.forEach((h, i) => {
+            const bx = cardLeft + gap + (i * (barW + gap));
+            const bh = (h.montoTotal / maxH) * chartH;
+            const by = y + chartH - bh;
+
+            // Bar
+            ctx.fillStyle = colors.primaryLight;
+            roundRect(ctx, bx, by, barW, bh, 4);
+            ctx.fill();
+            
+            // Highlight top
+            ctx.fillStyle = colors.primary;
+            roundRect(ctx, bx, by, barW, 4, 4);
+            ctx.fill();
+
+            // Label
+            ctx.font = `600 12px ${fontBase}`;
+            ctx.fillStyle = colors.textMuted;
+            const label = new Date(h.mes + '-02').toLocaleDateString('es-ES', { month: 'short' }).toUpperCase();
+            const lw = ctx.measureText(label).width;
+            ctx.fillText(label, bx + (barW / 2) - (lw / 2), y + chartH + 20);
+        });
+
+        y += chartH + 50;
+    }
+
+    // --- FOOTER ---
+    y = totalHeight - 50;
+    ctx.font = `500 13px ${fontBase}`;
     ctx.fillStyle = colors.textLight;
-    ctx.textAlign = 'center';
-    ctx.fillText('JamberCorp - Sistema de Gestión Empresarial', cardWidth / 2, yPos + 25);
-    ctx.fillText(`Generado el ${fecha}`, cardWidth / 2, yPos + 40);
-    ctx.textAlign = 'left';
+    const footerText = `JamberCorp - Reporte generado el ${fecha}`;
+    const fw = ctx.measureText(footerText).width;
+    ctx.fillText(footerText, (canvasWidth / 2) - (fw / 2), y);
 
     // Descargar imagen
     canvas.toBlob((blob) => {

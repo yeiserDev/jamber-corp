@@ -63,13 +63,13 @@ function colorLocal(nombre: string, tipo: string, fallbackIdx = 0): ColorSet {
   return FALLBACK_COLORS[fallbackIdx % FALLBACK_COLORS.length];
 }
 
-/* â”€â”€ Formateo de mes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Formateo de mes ─────────────────────────────────────── */
 const fmesLargo = (m: string) =>
   new Date(m + "-02").toLocaleDateString("es-ES", { month: "long", year: "numeric" });
 const fmesCorto = (m: string) =>
   new Date(m + "-02").toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
 
-/* â”€â”€ Skeleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Skeleton ────────────────────────────────────────────── */
 function Skeleton() {
   return (
     <DashboardLayout title="">
@@ -110,7 +110,7 @@ export default function Dashboard() {
     finally { setLoading(false); }
   }
 
-  /* â”€â”€ Helpers de datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Helpers de datos ──────────────────────────────────── */
 
   function obtenerLocales() {
     const map: Record<string, { id: string; nombre: string; tipo: string }> = {};
@@ -181,10 +181,10 @@ export default function Dashboard() {
   }
 
 
-  /* â”€â”€ Guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Guard ─────────────────────────────────────────────── */
   if (loading) return <Skeleton />;
 
-  /* â”€â”€ Datos derivados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Datos derivados ───────────────────────────────────── */
   const locales      = obtenerLocales();
   const meses        = Array.from(new Set(gastos.map(g => g.mes))).sort().reverse();
   const stats        = calcularResumen();
@@ -197,8 +197,8 @@ export default function Dashboard() {
   const comparacion  = mesComparar ? obtenerComparacion(mesComparar) : [];
   const maxLocal     = Math.max(...distLocal.map(l => l.total), 1);
 
-  /* â”€â”€ Insights â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  // Mes mÃ¡s caro del historial completo
+  /* ── Insights ───────────────────────────────────── */
+  // Mes más caro del historial completo
   const mesesAgrupados = meses.map(m => ({
     mes: m,
     total: gastos.filter(g => g.mes === m).reduce((s, g) => s + g.montoTotal, 0),
@@ -210,7 +210,7 @@ export default function Dashboard() {
     ? mesesAgrupados.reduce((s, m) => s + m.total, 0) / mesesAgrupados.length
     : 0;
 
-  // Meses sin registro en el aÃ±o actual
+  // Meses sin registro en el año actual
   const mesesDelAnio = Array.from({ length: 12 }, (_, i) =>
     `${anioActual}-${String(i + 1).padStart(2, "0")}`
   );
@@ -223,12 +223,12 @@ export default function Dashboard() {
     return mIdx <= mesActualIdx;
   });
 
-  // Ãšltimo registro
+  // Último registro
   const ultimoRegistro = gastos.length > 0
     ? [...gastos].sort((a, b) => b.mes.localeCompare(a.mes))[0]
     : null;
 
-  // Datos para mini grÃ¡fico de tendencia (12 meses recientes)
+  // Datos para mini gráfico de tendencia (12 meses recientes)
   const tendencia12 = [...mesesAgrupados].sort((a, b) => a.mes.localeCompare(b.mes)).slice(-12);
   const maxTendencia = Math.max(...tendencia12.map(t => t.total), 1);
   const tendenciaConDetalle = tendencia12.map(t => ({
@@ -237,7 +237,7 @@ export default function Dashboard() {
     agua: gastos.filter(g => g.mes === t.mes && g.tipo === "agua").reduce((s, g) => s + g.montoTotal, 0),
   }));
 
-  /* â”€â”€ Shared CSS helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Shared CSS helpers ────────────────────────────────── */
   const card      = "bg-white rounded-[18px] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04)]";
   const cardHover = `${card} hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all`;
   const lbl       = "text-[11px] font-medium text-[#aeaeb2] uppercase tracking-wider";
@@ -257,9 +257,9 @@ export default function Dashboard() {
   return (
     <DashboardLayout title="">
 
-      {/* â”€â”€ Tab bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Tab bar ───────────────────────────────────────── */}
       <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        {/* Tabs: scroll horizontal en mÃ³vil */}
+        {/* Tabs: scroll horizontal en móvil */}
         <div className="overflow-x-auto -mx-1 px-1">
           <div className="flex bg-[#e5e5ea] p-1 rounded-[14px] gap-0.5 w-max">
             {TABS.map(t => (
@@ -278,17 +278,10 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
-        <Link
-          href="/gastos"
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-[12px] text-[13px] font-semibold transition-all w-full sm:w-auto"
-        >
-          <Receipt className="w-3.5 h-3.5" />
-          Gestionar Gastos
-        </Link>
       </div>
 
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-          TAB 1 â€” RESUMEN
+          TAB 1 — RESUMEN
       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === "resumen" && (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
@@ -309,7 +302,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between sm:justify-end gap-4">
                   <div className="text-right">
-                    <p className={`${lbl} mb-1`}>Total del AÃ±o</p>
+                    <p className={`${lbl} mb-1`}>Total del Año</p>
                     <p className={`text-[26px] sm:text-[32px] font-bold ${tp} tracking-tight leading-none`}>
                       S/ {stats.totalActual.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
                     </p>
@@ -323,10 +316,10 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* â”€â”€ Insight cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* ── Insight cards ─────────────────────────────── */}
             <div className="grid grid-cols-2 gap-3">
 
-              {/* Mes mÃ¡s caro */}
+              {/* Mes más caro */}
               <div className={`animate-fade-up delay-100 ${card} p-5 group hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-all`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -337,7 +330,7 @@ export default function Dashboard() {
                   </div>
                   {mesMasCaro.mes && (
                     <span className="text-[10px] font-semibold text-[#6e6e73] bg-[#f5f5f7] px-2 py-0.5 rounded-full">
-                      mÃ¡ximo
+                      máximo
                     </span>
                   )}
                 </div>
@@ -372,7 +365,7 @@ export default function Dashboard() {
                 <p className={`text-[12px] ${ts} mt-2`}>
                   {promedioMensual < mesMasCaro.total
                     ? `${((mesMasCaro.total - promedioMensual) / promedioMensual * 100).toFixed(0)}% bajo el pico`
-                    : "Referencia histÃ³rica"}
+                    : "Referencia histórica"}
                 </p>
               </div>
 
@@ -407,14 +400,14 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              {/* Ãšltimo registro */}
+              {/* Último registro */}
               <div className={`animate-fade-up delay-250 ${card} p-5 hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-all`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-[7px] bg-[#f5f5f7] flex items-center justify-center">
                       <Clock className="w-3 h-3 text-[#6e6e73]" />
                     </div>
-                    <p className={lbl}>Ãšltimo registro</p>
+                    <p className={lbl}>Último registro</p>
                   </div>
                   {ultimoRegistro && (
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ultimoRegistro.tipo === "luz" ? "text-amber-600 bg-amber-50" : "text-sky-600 bg-sky-50"}`}>
@@ -431,7 +424,7 @@ export default function Dashboard() {
                       {new Date(ultimoRegistro.mes + "-02").toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
                     </p>
                   </>
-                ) : <p className={`text-[13px] ${ts}`}>Sin registros aÃºn</p>}
+                ) : <p className={`text-[13px] ${ts}`}>Sin registros aún</p>}
               </div>
             </div>
 
@@ -545,7 +538,7 @@ export default function Dashboard() {
 
           {/* Columna derecha */}
           <div className="col-span-12 md:col-span-3 flex flex-col gap-5">
-            {/* Cobertura del aÃ±o â€” meses con/sin datos */}
+            {/* Cobertura del año — meses con/sin datos */}
             <div className={`animate-fade-up delay-100 ${card} p-5`}>
               <div className="flex items-center gap-2 mb-4">
                 <CalendarCheck className="w-4 h-4 text-[#0071e3]" />
@@ -601,7 +594,7 @@ export default function Dashboard() {
                 <div className="w-2 h-2 bg-[#34c759] rounded-full animate-pulse" />
                 <span className="text-[11px] font-semibold text-white/50 uppercase tracking-widest">Sistema activo</span>
               </div>
-              <p className="text-[14px] font-medium text-white/90 leading-snug">Datos sincronizados y al dÃ­a.</p>
+              <p className="text-[14px] font-medium text-white/90 leading-snug">Datos sincronizados y al día.</p>
               <p className="text-[12px] text-white/35 mt-2">
                 {new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
               </p>
@@ -613,7 +606,7 @@ export default function Dashboard() {
 
 
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-          TAB 2 â€” HISTORIAL GENERAL
+          TAB 2 — HISTORIAL GENERAL
       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === "historial" && (() => {
         const gFiltrados = gastos.filter(g => filtroHistorial === "todos" || g.tipo === filtroHistorial);
@@ -624,7 +617,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h2 className={`text-[20px] font-semibold ${tp} tracking-tight`}>Historial General</h2>
-                <p className={`text-[13px] ${ts} mt-0.5`}>{gFiltrados.length} registros Â· {mesesFiltrados.length} meses</p>
+                <p className={`text-[13px] ${ts} mt-0.5`}>{gFiltrados.length} registros · {mesesFiltrados.length} meses</p>
               </div>
               <div className="flex bg-[#e5e5ea] p-1 rounded-[10px] gap-0.5">
                 {(["todos", "luz", "agua"] as TipoFiltro[]).map(f => (
@@ -709,7 +702,7 @@ export default function Dashboard() {
                               </div>
                               <div className="text-right">
                                 <p className={`text-[16px] font-bold ${tp} tracking-tight`}>S/ {gasto.montoTotal.toFixed(2)}</p>
-                                <p className={`text-[11px] ${ts}`}>{gasto.consumoTotal.toFixed(1)} {gasto.tipo === "luz" ? "kWh" : "mÂ³"}</p>
+                                <p className={`text-[11px] ${ts}`}>{gasto.consumoTotal.toFixed(1)} {gasto.tipo === "luz" ? "kWh" : "m³"}</p>
                               </div>
                             </div>
                             {/* Desglose por local */}
@@ -742,7 +735,7 @@ export default function Dashboard() {
       })()}
 
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-          TAB 3 â€” POR LOCAL
+          TAB 3 — POR LOCAL
       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === "local" && (() => {
         const maxH     = Math.max(...histLocal.map(h => h.total), 1);
@@ -755,7 +748,7 @@ export default function Dashboard() {
           <div className="animate-fade-up space-y-5">
             <div>
               <h2 className={`text-[20px] font-semibold ${tp} tracking-tight`}>Historial por Local</h2>
-              <p className={`text-[13px] ${ts} mt-0.5`}>Electricidad y agua â€” histÃ³rico completo</p>
+              <p className={`text-[13px] ${ts} mt-0.5`}>Electricidad y agua — histórico completo</p>
             </div>
 
             {/* Selector de local */}
@@ -772,7 +765,7 @@ export default function Dashboard() {
                     style={selected ? { backgroundColor: c.hex } : {}}>
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: selected ? "rgba(255,255,255,0.6)" : c.hex }} />
                     {l.nombre}
-                    {l.tipo === "casa" && <span className={`text-[10px] ${selected ? "opacity-60" : ts}`}>Â· Casa</span>}
+                    {l.tipo === "casa" && <span className={`text-[10px] ${selected ? "opacity-60" : ts}`}>· Casa</span>}
                   </button>
                 );
               })}
@@ -826,7 +819,7 @@ export default function Dashboard() {
                   <div className={card}>
                     <div className="px-6 py-5 border-b border-black/[0.04] flex items-center justify-between">
                       <div>
-                        <h3 className={`text-[15px] font-semibold ${tp} tracking-tight`}>EvoluciÃ³n mensual â€” {localObj.nombre}</h3>
+                        <h3 className={`text-[15px] font-semibold ${tp} tracking-tight`}>Evolución mensual — {localObj.nombre}</h3>
                         <p className={`text-[12px] ${ts} mt-0.5`}>Agua y luz por mes</p>
                       </div>
                       <div className="flex items-center gap-4">
@@ -866,24 +859,28 @@ export default function Dashboard() {
                         const pLuz  = h.total > 0 ? ((h.luz  / h.total) * 100).toFixed(0) : "0";
                         const pAgua = h.total > 0 ? ((h.agua / h.total) * 100).toFixed(0) : "0";
                         return (
-                          <div key={h.mes} className="px-6 py-4 flex items-center justify-between hover:bg-[#f5f5f7]/60 transition-colors">
-                            <p className={`text-[14px] font-semibold ${tp} capitalize w-40`}>{fmesLargo(h.mes)}</p>
-                            <div className="flex items-center gap-8">
-                              <div className="flex items-center gap-2">
+                          <div key={h.mes} className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-[#f5f5f7]/60 transition-colors gap-3 sm:gap-0">
+                            <div className="flex items-center justify-between sm:w-40 sm:justify-start">
+                              <p className={`text-[14px] font-semibold ${tp} capitalize`}>{fmesLargo(h.mes)}</p>
+                              <p className={`text-[15px] font-bold ${tp} tracking-tight sm:hidden`}>S/ {h.total.toFixed(2)}</p>
+                            </div>
+                            
+                            <div className="flex items-center gap-6 sm:gap-8 justify-between sm:justify-end w-full sm:w-auto">
+                              <div className="flex items-center gap-2 flex-1 sm:flex-none">
                                 <Zap className="w-3.5 h-3.5 text-amber-500" />
                                 <div>
-                                  <span className="text-[13px] font-semibold text-amber-600">S/ {h.luz.toFixed(2)}</span>
-                                  <span className={`text-[11px] ${ts} ml-1`}>{pLuz}%</span>
+                                  <span className="text-[13px] font-semibold text-amber-600 block sm:inline">S/ {h.luz.toFixed(2)}</span>
+                                  <span className={`text-[11px] ${ts} sm:ml-1 block sm:inline`}>{pLuz}%</span>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-1 sm:flex-none">
                                 <Droplets className="w-3.5 h-3.5 text-sky-500" />
                                 <div>
-                                  <span className="text-[13px] font-semibold text-sky-600">S/ {h.agua.toFixed(2)}</span>
-                                  <span className={`text-[11px] ${ts} ml-1`}>{pAgua}%</span>
+                                  <span className="text-[13px] font-semibold text-sky-600 block sm:inline">S/ {h.agua.toFixed(2)}</span>
+                                  <span className={`text-[11px] ${ts} sm:ml-1 block sm:inline`}>{pAgua}%</span>
                                 </div>
                               </div>
-                              <p className={`text-[16px] font-bold ${tp} tracking-tight w-28 text-right`}>S/ {h.total.toFixed(2)}</p>
+                              <p className={`text-[16px] font-bold ${tp} tracking-tight w-28 text-right hidden sm:block`}>S/ {h.total.toFixed(2)}</p>
                             </div>
                           </div>
                         );
@@ -898,20 +895,20 @@ export default function Dashboard() {
       })()}
 
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-          TAB 4 â€” COMPARAR
+          TAB 4 — COMPARAR
       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === "comparar" && (() => {
         const totalGlobal = comparacion.reduce((s, c) => s + c.total, 0);
         const getVal = (item: typeof comparacion[0]) =>
           filtroComparar === "luz" ? item.luz : filtroComparar === "agua" ? item.agua : item.total;
         const maxVal = Math.max(...comparacion.map(c => getVal(c)), 1);
-        const gridCols = comparacion.length <= 2 ? "grid-cols-2" : comparacion.length === 3 ? "grid-cols-3" : "grid-cols-4";
+        const gridCols = comparacion.length <= 2 ? "grid-cols-1 sm:grid-cols-2" : comparacion.length === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2 lg:grid-cols-4";
 
         return (
           <div className="animate-fade-up space-y-5">
             <div>
-              <h2 className={`text-[20px] font-semibold ${tp} tracking-tight`}>ComparaciÃ³n entre Locales</h2>
-              <p className={`text-[13px] ${ts} mt-0.5`}>Todos los espacios â€” incluye casa y comerciales</p>
+              <h2 className={`text-[20px] font-semibold ${tp} tracking-tight`}>Comparación entre Locales</h2>
+              <p className={`text-[13px] ${ts} mt-0.5`}>Todos los espacios — incluye casa y comerciales</p>
             </div>
 
             {/* Controles */}
@@ -983,11 +980,11 @@ export default function Dashboard() {
                   })}
                 </div>
 
-                {/* GrÃ¡fico de barras comparativo */}
+                {/* Gráfico de barras comparativo */}
                 <div className={card}>
                   <div className="px-6 py-5 border-b border-black/[0.04]">
                     <h3 className={`text-[15px] font-semibold ${tp} tracking-tight capitalize`}>
-                      {filtroComparar === "todos" ? "Gasto total" : filtroComparar === "luz" ? "Electricidad" : "Agua"} â€” {mesComparar ? fmesLargo(mesComparar) : ""}
+                      {filtroComparar === "todos" ? "Gasto total" : filtroComparar === "luz" ? "Electricidad" : "Agua"} — {mesComparar ? fmesLargo(mesComparar) : ""}
                     </h3>
                     <p className={`text-[12px] ${ts} mt-0.5`}>Barras horizontales proporcionales al gasto</p>
                   </div>
@@ -1000,7 +997,7 @@ export default function Dashboard() {
                       const pAgua = item.total > 0 ? (item.agua / item.total) * 100 : 0;
                       return (
                         <div key={item.id}>
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-1 sm:gap-0">
                             <div className="flex items-center gap-2.5">
                               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.hex }} />
                               <span className={`text-[14px] font-semibold ${tp}`}>{item.nombre}</span>
@@ -1008,7 +1005,7 @@ export default function Dashboard() {
                                 <span className={`text-[10px] ${ts} px-1.5 py-0.5 bg-[#f5f5f7] rounded-full`}>Residencial</span>
                               )}
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 justify-between sm:justify-end">
                               {filtroComparar !== "agua" && (
                                 <div className="flex items-center gap-1">
                                   <Zap className="w-3 h-3 text-amber-500" />

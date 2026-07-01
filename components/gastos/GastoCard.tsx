@@ -1,6 +1,7 @@
 "use client";
 
-import { Zap, Droplets, Pencil, Trash2, Download, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Zap, Droplets, Pencil, Trash2, Download, FileText, BarChart } from "lucide-react";
 import { Gasto, Local } from "@/types/gasto";
 import { generarReporteImagen } from "@/utils/reportGenerator";
 import { generarReporteProfesor } from "@/utils/reporteProfesor";
@@ -14,14 +15,14 @@ interface GastoCardProps {
 }
 
 /* ── Color por local ─────────────────────────────────────── */
-function colorLocal(nombre: string, tipo: string): { hex: string; light: string } {
+function colorLocal(nombre: string, tipo: string): string {
   const n = nombre.toLowerCase();
   const t = tipo.toLowerCase();
-  if (t === "spa"      || n.includes("spa"))    return { hex: "#0071e3", light: "bg-blue-50"   };
-  if (t === "panaderia"|| n.includes("panad"))  return { hex: "#ff9500", light: "bg-amber-50"  };
-  if (t === "profesor" || n.includes("profe"))  return { hex: "#34c759", light: "bg-green-50"  };
-  if (t === "casa"     || n.includes("casa"))   return { hex: "#6e6e73", light: "bg-gray-100"  };
-  return { hex: "#bf5af2", light: "bg-purple-50" };
+  if (t === "spa"      || n.includes("spa"))    return "#0071e3"; // blue
+  if (t === "panaderia"|| n.includes("panad"))  return "#ff9500"; // orange
+  if (t === "profesor" || n.includes("profe"))  return "#34c759"; // green
+  if (t === "casa"     || n.includes("casa"))   return "#8e8e93"; // gray
+  return "#bf5af2"; // purple
 }
 
 export default function GastoCard({
@@ -31,6 +32,12 @@ export default function GastoCard({
   onEdit,
   onDelete,
 }: GastoCardProps) {
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserRole(localStorage.getItem("userRole"));
+  }, []);
+
   const isLuz = gasto.tipo === "luz";
   const unit  = isLuz ? "kWh" : "m³";
   const costoPorUnidad = gasto.consumoTotal > 0 ? gasto.montoTotal / gasto.consumoTotal : 0;
@@ -49,124 +56,247 @@ export default function GastoCard({
     return local && (local.tipo === "profesor" || local.nombre?.toLowerCase().includes("academia"));
   });
 
-  /* ── Shared text helpers ─────────────────────────────── */
-  const tp = "text-[#1d1d1f]";
-  const ts = "text-[#6e6e73]";
+  const themeColor = isLuz ? "text-amber-500" : "text-sky-500";
+  const themeBg    = isLuz ? "bg-amber-50" : "bg-sky-50";
+  const themeBorder= isLuz ? "border-amber-200" : "border-sky-200";
 
   return (
-    <div className="w-full sm:w-auto bg-white/80 backdrop-blur-lg rounded-[18px] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all overflow-hidden flex flex-col">
-
-      {/* ── Encabezado ─────────────────────────────────── */}
-      <div className="p-5 pb-4">
-        <div className="flex flex-col sm:flex-row items-start justify-between">
+    <div className={`h-full w-full bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]`}>
+      
+      {/* ── HEADER ── */}
+      <div className="p-6 pb-4">
+        <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-[12px] ${isLuz ? "bg-amber-50" : "bg-sky-50"}`}>
-              {isLuz
-                ? <Zap      className="w-[18px] h-[18px] text-amber-500" />
-                : <Droplets className="w-[18px] h-[18px] text-sky-500"   />
-              }
+            <div className={`w-12 h-12 rounded-[14px] ${themeBg} flex items-center justify-center`}>
+              {isLuz ? <Zap className={`w-6 h-6 ${themeColor}`} fill="currentColor" fillOpacity={0.2} /> : <Droplets className={`w-6 h-6 ${themeColor}`} fill="currentColor" fillOpacity={0.2} />}
             </div>
             <div>
-              <p className={`text-[15px] font-semibold ${tp} tracking-tight`}>
+              <h3 className="text-[17px] font-bold text-gray-900 tracking-tight">
                 {isLuz ? "Electricidad" : "Agua"}
-              </p>
-              <p className={`text-[11px] ${ts} mt-0.5`}>
-                {gasto.consumoTotal.toFixed(1)} {unit}
-                &nbsp;·&nbsp;
-                S/ {costoPorUnidad.toFixed(4)}/{unit}
+              </h3>
+              <p className="text-[13px] font-medium text-gray-500 mt-0.5">
+                {gasto.consumoTotal.toFixed(1)} {unit} &nbsp;·&nbsp; S/ {costoPorUnidad.toFixed(4)}/{unit}
               </p>
             </div>
           </div>
-
           <div className="text-right">
-            <p className={`text-[22px] font-bold ${tp} tracking-tight leading-none`}>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Total a cobrar</p>
+            <p className={`text-[24px] font-black tracking-tighter leading-none ${themeColor}`}>
               S/ {gasto.montoTotal.toFixed(2)}
             </p>
-            <p className={`text-[11px] ${ts} mt-1`}>{localesACobrar.length} locales</p>
           </div>
         </div>
       </div>
 
-      {/* ── Distribución — siempre visible ─────────────── */}
-      <div className="px-5 pb-5 space-y-3 flex-1">
-        <p className="text-[10px] font-semibold text-[#aeaeb2] uppercase tracking-wider">
-          Distribución por local
-        </p>
-        {localesACobrar.length === 0 ? (
-          <p className={`text-[12px] ${ts}`}>Sin locales asignados</p>
-        ) : (
-          localesACobrar.map((costo, idx) => {
-            const local = typeof costo.localId === "string"
-              ? locales.find(l => l._id === costo.localId)
-              : costo.localId;
-            const nombre = local?.nombre || "Local";
-            const tipo   = local?.tipo   || "";
-            const c      = colorLocal(nombre, tipo);
-            const pct    = gasto.montoTotal > 0 ? (costo.monto / gasto.montoTotal) * 100 : 0;
+      {/* ── DISTRIBUCIÓN POR LOCAL ── */}
+      <div className="px-6 flex-1">
+        <p className="text-[12px] font-medium text-gray-400 mb-4">Distribución por local</p>
+        
+        <div className="space-y-4 relative z-10">
+          {localesACobrar.length === 0 ? (
+             <p className="text-[13px] text-gray-500">Sin locales asignados</p>
+          ) : (
+            localesACobrar.map((costo, idx) => {
+              const local = typeof costo.localId === "string"
+                ? locales.find(l => l._id === costo.localId)
+                : costo.localId;
+              const nombre = local?.nombre || "Local";
+              const tipo   = local?.tipo   || "";
+              const hex    = colorLocal(nombre, tipo);
+              const pct    = gasto.montoTotal > 0 ? (costo.monto / gasto.montoTotal) * 100 : 0;
 
-            return (
-              <div key={idx}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.hex }} />
-                    <span className={`text-[13px] font-medium ${tp}`}>{nombre}</span>
-                    <span className={`text-[11px] ${ts}`}>{costo.consumo.toFixed(1)} {unit}</span>
+              return (
+                <div key={idx}>
+                  <div className="flex items-center justify-between mb-2 text-[13px]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: hex }} />
+                      <span className="font-semibold text-gray-800">{nombre}</span>
+                      <span className="text-gray-400 text-[12px] ml-1">{costo.consumo.toFixed(1)} {unit}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-400 font-medium text-[12px]">{pct.toFixed(1)}%</span>
+                      <span 
+                        className="font-bold text-[13px] px-2.5 py-1 rounded-lg tabular-nums shadow-[0_2px_8px_rgba(0,0,0,0.04)] border" 
+                        style={{ backgroundColor: `${hex}0A`, color: hex, borderColor: `${hex}30` }}
+                      >
+                        S/ {costo.monto.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[11px] ${ts}`}>{pct.toFixed(0)}%</span>
-                    <span className={`text-[13px] font-bold ${tp} tabular-nums w-20 text-right`}>
-                      S/ {costo.monto.toFixed(2)}
-                    </span>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{ width: `${pct}%`, backgroundColor: hex }}
+                    />
                   </div>
                 </div>
-                <div className="h-1.5 bg-[#f5f5f7] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bar-grow"
-                    style={{ width: `${pct}%`, backgroundColor: c.hex }}
-                  />
-                </div>
-              </div>
-            );
-          })
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* ── ILUSTRACIÓN DECORATIVA ── */}
+      <div className="relative h-24 mt-2 overflow-hidden pointer-events-none opacity-80">
+        {isLuz ? (
+          <svg viewBox="0 0 600 120" className="absolute bottom-0 w-full h-full text-amber-100" preserveAspectRatio="xMidYMax slice">
+             {/* Nubes */}
+             <path d="M460,40 Q460,32 468,32 Q473,26 482,32 Q495,32 495,43 L460,43 Z" fill="#f1f5f9" />
+             <path d="M160,50 Q160,45 165,45 Q170,40 176,45 Q185,45 185,52 L160,52 Z" fill="#f1f5f9" />
+             
+             {/* Sol */}
+             <circle cx="420" cy="50" r="16" fill="#fcd34d" />
+             
+             {/* Suelo */}
+             <rect x="0" y="105" width="600" height="15" fill="#f8fafc" />
+             <rect x="0" y="105" width="600" height="2" fill="#f1f5f9" />
+
+             {/* Torre 1 (Grande) */}
+             <g stroke="#cbd5e1" strokeWidth="1.5" fill="none" transform="translate(60, 0)">
+               <path d="M50,105 L65,35 L80,105" />
+               <path d="M40,55 L90,55" />
+               <path d="M45,75 L85,75" />
+               <path d="M56,80 L72,105 M74,80 L58,105" />
+               <path d="M60,55 L70,75 M70,55 L60,75" />
+               <path d="M62,35 L68,55 M68,35 L62,55" />
+               <line x1="65" y1="20" x2="65" y2="35" />
+               <line x1="55" y1="35" x2="75" y2="35" />
+             </g>
+
+             {/* Torre 2 (Pequeña, más atrás) */}
+             <g stroke="#e2e8f0" strokeWidth="1" fill="none" transform="translate(120, 25) scale(0.7)">
+               <path d="M50,115 L65,45 L80,115" />
+               <path d="M40,65 L90,65" />
+               <path d="M45,85 L85,85" />
+               <path d="M56,90 L72,115 M74,90 L58,115" />
+               <path d="M60,65 L70,85 M70,65 L60,85" />
+               <path d="M62,45 L68,65 M68,45 L62,65" />
+               <line x1="65" y1="30" x2="65" y2="45" />
+               <line x1="55" y1="45" x2="75" y2="45" />
+             </g>
+             
+             {/* Árboles detrás de paneles */}
+             <circle cx="235" cy="95" r="10" fill="#a7f3d0" />
+             <circle cx="250" cy="100" r="7" fill="#86efac" />
+
+             {/* Panel Solar 1 */}
+             <g transform="translate(225, 65)">
+               <rect x="18" y="30" width="3" height="15" fill="#94a3b8" />
+               <polygon points="0,30 25,30 35,0 10,0" fill="#3b82f6" />
+               <line x1="6" y1="10" x2="31" y2="10" stroke="#bfdbfe" strokeWidth="0.5" />
+               <line x1="12" y1="20" x2="37" y2="20" stroke="#bfdbfe" strokeWidth="0.5" />
+               <line x1="18" y1="0" x2="8" y2="30" stroke="#bfdbfe" strokeWidth="0.5" />
+               <line x1="26" y1="0" x2="16" y2="30" stroke="#bfdbfe" strokeWidth="0.5" />
+             </g>
+
+             {/* Panel Solar 2 */}
+             <g transform="translate(265, 70) scale(0.85)">
+               <rect x="18" y="30" width="3" height="15" fill="#94a3b8" />
+               <polygon points="0,30 25,30 35,0 10,0" fill="#3b82f6" />
+               <line x1="6" y1="10" x2="31" y2="10" stroke="#bfdbfe" strokeWidth="0.5" />
+               <line x1="12" y1="20" x2="37" y2="20" stroke="#bfdbfe" strokeWidth="0.5" />
+               <line x1="18" y1="0" x2="8" y2="30" stroke="#bfdbfe" strokeWidth="0.5" />
+               <line x1="26" y1="0" x2="16" y2="30" stroke="#bfdbfe" strokeWidth="0.5" />
+             </g>
+
+             {/* Árboles Izquierda (cerca de la torre) */}
+             <circle cx="105" cy="100" r="8" fill="#4ade80" />
+             <circle cx="95" cy="98" r="12" fill="#86efac" />
+
+             {/* Edificio Moderno */}
+             <g transform="translate(370, 75)">
+               <circle cx="-15" cy="25" r="8" fill="#6ee7b7" />
+               <circle cx="-5" cy="20" r="12" fill="#34d399" />
+               
+               <rect x="0" y="0" width="70" height="30" fill="#e2e8f0" />
+               <polygon points="70,0 85,5 85,30 70,30" fill="#cbd5e1" />
+               
+               <rect x="0" y="0" width="70" height="6" fill="#3b82f6" />
+               <polygon points="70,0 85,5 85,11 70,6" fill="#2563eb" />
+               
+               <rect x="5" y="12" width="12" height="10" fill="#93c5fd" />
+               <rect x="22" y="12" width="25" height="10" fill="#60a5fa" />
+               <rect x="52" y="12" width="12" height="10" fill="#93c5fd" />
+             </g>
+
+             {/* Árboles Derecha */}
+             <circle cx="480" cy="100" r="10" fill="#10b981" />
+             <path d="M510,70 L500,105 L520,105 Z" fill="#059669" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 600 120" className="absolute bottom-0 w-full h-full" preserveAspectRatio="xMidYMax slice">
+             {/* Ondas / Montañas */}
+             <path d="M0,80 C60,80 90,60 150,60 C210,60 240,85 300,85 C360,85 390,70 450,70 C510,70 540,90 600,90 L600,120 L0,120 Z" fill="#e0f2fe" />
+             <path d="M0,95 C75,95 105,75 180,75 C255,75 285,95 360,95 C435,95 465,80 540,80 C570,80 585,90 600,90 L600,120 L0,120 Z" fill="#bae6fd" opacity="0.6" />
+             <path d="M0,105 C90,105 120,90 210,90 C300,90 330,105 420,105 C510,105 540,95 600,95 L600,120 L0,120 Z" fill="#7dd3fc" opacity="0.4" />
+             
+             {/* Gota de agua en el centro */}
+             <g transform="translate(282, 32)">
+               <path d="M18,0 C18,0 0,26 0,39 C0,48.9 8.1,57 18,57 C27.9,57 36,48.9 36,39 C36,26 18,0 18,0 Z" fill="#3b82f6" />
+               <path d="M28,38 C28,45 22,51 15,52 C21,52 26,46 26,38 C26,27 19,13 19,13 C19,13 28,26 28,38 Z" fill="#93c5fd" opacity="0.8"/>
+             </g>
+          </svg>
         )}
       </div>
 
-      {/* ── Acciones ───────────────────────────────────── */}
-      <div className="px-4 py-3 border-t border-black/[0.04] flex items-center gap-1.5">
-        <button
-          onClick={e => { e.stopPropagation(); generarReporteImagen(gasto, todosGastos, locales); }}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold ${ts} hover:text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#e5e5ea] rounded-[8px] transition-all`}
-        >
-          <Download className="w-3 h-3" />
-          Reporte
-        </button>
+      {/* ── FOOTER: RESUMEN Y BOTONES ── */}
+      <div className="px-6 pt-4 pb-6 bg-white border-t border-gray-50 relative z-10">
+        <div className="flex items-center justify-between mb-4">
+           <div>
+             <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Total consumido</p>
+             <p className="text-[15px] font-bold text-gray-900 mt-0.5">{gasto.consumoTotal.toFixed(1)} {unit}</p>
+           </div>
+           <div>
+             <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Costo promedio</p>
+             <p className="text-[15px] font-bold text-gray-900 mt-0.5">S/ {costoPorUnidad.toFixed(4)}/{unit}</p>
+           </div>
+        </div>
 
-        {tieneProfesor && (
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={e => { e.stopPropagation(); generarReporteProfesor(gasto, todosGastos, locales); }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-[#0071e3] bg-blue-50 hover:bg-blue-100 rounded-[8px] transition-all"
+            onClick={e => { e.stopPropagation(); generarReporteImagen(gasto, todosGastos, locales); }}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-[12px] transition-all`}
           >
-            <FileText className="w-3 h-3" />
-            Profesor
+            <Download className="w-4 h-4" />
+            Reporte
           </button>
-        )}
 
-        <div className="flex-1" />
+          {tieneProfesor ? (
+            <button
+              onClick={e => { e.stopPropagation(); generarReporteProfesor(gasto, todosGastos, locales); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-[12px] transition-all`}
+            >
+              <FileText className="w-4 h-4" />
+              Profesor
+            </button>
+          ) : (
+            <button
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-[12px] transition-all`}
+            >
+              <BarChart className="w-4 h-4" />
+              Detalle
+            </button>
+          )}
 
-        <button
-          onClick={e => { e.stopPropagation(); onEdit(gasto); }}
-          title="Editar"
-          className={`p-1.5 ${ts} hover:text-[#1d1d1f] hover:bg-[#f5f5f7] rounded-[8px] transition-all`}
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={e => { e.stopPropagation(); onDelete(gasto._id); }}
-          title="Eliminar"
-          className={`p-1.5 ${ts} hover:text-red-500 hover:bg-red-50 rounded-[8px] transition-all`}
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+          {userRole === "admin" && (
+            <div className="flex gap-2 ml-auto">
+              <button
+                onClick={e => { e.stopPropagation(); onEdit(gasto); }}
+                title="Editar"
+                className="p-2.5 text-gray-400 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-[12px] transition-all"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); onDelete(gasto._id); }}
+                title="Eliminar"
+                className="p-2.5 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-[12px] transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

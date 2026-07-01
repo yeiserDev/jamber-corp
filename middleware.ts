@@ -2,19 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  if (pathname.startsWith('/login')) {
-    return NextResponse.next();
-  }
-
-  const session = request.cookies.get('auth-session');
-
-  if (!session?.value) {
-    const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
+  // La aplicación ahora es pública por defecto (Modo Inquilino).
+  // La seguridad se maneja a nivel de UI (ocultando botones) y API (validando rol admin).
   return NextResponse.next();
 }
 
