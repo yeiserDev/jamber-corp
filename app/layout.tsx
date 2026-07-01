@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -16,6 +16,21 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Jamber Corp — Gestión de Gastos",
   description: "Plataforma de gestión automatizada de gastos de agua y luz para locales comerciales.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Jamber Corp",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#0f172a",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -24,13 +39,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-      </head>
+    <html lang="es" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning={true}
+        suppressHydrationWarning
       >
         {children}
       </body>

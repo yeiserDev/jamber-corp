@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Receipt,
   LogOut,
+  Plus
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -24,8 +25,8 @@ export default function Sidebar() {
   const isActive = (path: string) => pathname === path;
 
   const navItems = [
-    { href: "/",       label: "Dashboard",        icon: <LayoutDashboard className="w-[18px] h-[18px] flex-shrink-0" /> },
-    { href: "/gastos", label: "Gastos de Locales", icon: <Receipt         className="w-[18px] h-[18px] flex-shrink-0" /> },
+    { href: "/",       label: "Dashboard",        icon: <LayoutDashboard className="w-[22px] h-[22px] stroke-[1.5] flex-shrink-0" /> },
+    { href: "/gastos", label: "Gastos", icon: <Receipt         className="w-[22px] h-[22px] stroke-[1.5] flex-shrink-0" /> },
   ];
 
   return (
@@ -54,11 +55,9 @@ export default function Sidebar() {
             >
               {icon}
               <span>{label}</span>
-              {isActive(href) && href === "/" && (
-                <span className="ml-auto bg-[#0071e3] text-white text-[11px] font-semibold px-2 py-0.5 rounded-full">
-                  2
-                </span>
-              )}
+              <span className={`ml-auto bg-[#0071e3] text-white text-[11px] font-semibold px-2 py-0.5 rounded-full ${isActive(href) && href === "/" ? "block" : "hidden"}`}>
+                2
+              </span>
             </Link>
           ))}
 
@@ -80,37 +79,47 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* ── Bottom Navigation — solo visible en móvil (<md) ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#1d1d1f]/95 backdrop-blur-xl border-t border-white/[0.08] flex items-stretch safe-area-bottom">
-        {navItems.map(({ href, label, icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all ${
-              isActive(href)
-                ? "text-white"
-                : "text-white/40 active:text-white/70"
-            }`}
-          >
-            <span className={`transition-transform ${isActive(href) ? "scale-110" : "scale-100"}`}>
+      {/* ── Bottom Navigation (Floating Pill & FAB) — solo visible en móvil (<md) ── */}
+      <div className="md:hidden fixed bottom-6 left-4 right-4 z-50 flex items-center justify-between gap-3 pointer-events-none">
+        
+        {/* Floating Nav Pill */}
+        <nav className="flex-1 bg-white/95 backdrop-blur-xl border border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-[98px] flex items-center justify-around p-1.5 pointer-events-auto h-[60px]">
+          {navItems.map(({ href, label, icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center justify-center h-full rounded-full transition-all duration-300 ${
+                isActive(href)
+                  ? "bg-[#f5f5f7] text-[#1d1d1f] px-5 gap-2"
+                  : "text-[#86868b] hover:text-[#1d1d1f] px-3 w-12"
+              }`}
+            >
               {icon}
-            </span>
-            <span className="text-[10px] font-semibold tracking-tight">{label.split(" ")[0]}</span>
-            {isActive(href) && (
-              <span className="absolute bottom-1.5 w-1 h-1 bg-[#0071e3] rounded-full" />
-            )}
-          </Link>
-        ))}
+              <span className={`text-[14px] font-semibold tracking-tight whitespace-nowrap overflow-hidden transition-all duration-300 ${isActive(href) ? "w-auto opacity-100 ml-1.5" : "w-0 opacity-0 ml-0"}`}>
+                {label.split(" ")[0]}
+              </span>
+            </Link>
+          ))}
+          
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center h-full text-[#86868b] hover:text-[#1d1d1f] px-3 w-12 rounded-full transition-all duration-300"
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="w-[22px] h-[22px] stroke-[1.5]" />
+          </button>
+        </nav>
 
-        {/* Logout */}
+        {/* Floating Action Button (+) */}
         <button
-          onClick={handleLogout}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-white/40 active:text-white/70 transition-all"
+          onClick={() => document.dispatchEvent(new CustomEvent('open-new-gasto'))}
+          className="w-[60px] h-[60px] bg-[#1d1d1f] rounded-full flex items-center justify-center text-white shadow-[0_8px_30px_rgb(0,0,0,0.2)] pointer-events-auto hover:scale-105 active:scale-95 transition-all flex-shrink-0"
+          aria-label="Nuevo registro"
         >
-          <LogOut className="w-[18px] h-[18px]" />
-          <span className="text-[10px] font-semibold tracking-tight">Salir</span>
+          <Plus className="w-8 h-8 stroke-[1.5]" />
         </button>
-      </nav>
+
+      </div>
     </>
   );
 }

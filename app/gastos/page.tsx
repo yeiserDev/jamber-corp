@@ -149,6 +149,16 @@ export default function GastosPage() {
     setLecturas(prev => { const n = [...prev]; (n[index] as any)[field] = value; return n; });
   }, []);
 
+  // Listen for global FAB click
+  useEffect(() => {
+    const handleOpenNewGasto = () => {
+      setPasoModal(1);
+      setShowNuevoGasto(true);
+    };
+    document.addEventListener("open-new-gasto", handleOpenNewGasto);
+    return () => document.removeEventListener("open-new-gasto", handleOpenNewGasto);
+  }, []);
+
   // Auto-fill lecturas
   useEffect(() => {
     if (showNuevoGasto && !gastoEditando && locales.length > 0) {
@@ -286,19 +296,19 @@ export default function GastosPage() {
       </div>
 
       {/* ── KPI Cards ──────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
         {[
-          { label: "Último Mes",    value: `S/ ${totalUltimoMes.toFixed(2)}`, icon: <Receipt  className="w-5 h-5 text-[#6e6e73]" />, bg: "bg-[#f5f5f7]",  delay: "delay-50"  },
-          { label: "Promedio Luz",  value: `S/ ${promedioLuz.toFixed(2)}`,   icon: <Zap      className="w-5 h-5 text-amber-500" />, bg: "bg-amber-50",   delay: "delay-100" },
-          { label: "Promedio Agua", value: `S/ ${promedioAgua.toFixed(2)}`,  icon: <Droplets className="w-5 h-5 text-sky-500"   />, bg: "bg-sky-50",     delay: "delay-150" },
+          { label: "Último Mes",    value: `S/ ${totalUltimoMes.toFixed(2)}`, icon: <Receipt  className="w-5 h-5 text-[#6e6e73]" />, bg: "bg-[#f5f5f7]",  delay: "delay-50", colSpan: "col-span-2 sm:col-span-1" },
+          { label: "Promedio Luz",  value: `S/ ${promedioLuz.toFixed(2)}`,   icon: <Zap      className="w-5 h-5 text-amber-500" />, bg: "bg-amber-50",   delay: "delay-100", colSpan: "col-span-1" },
+          { label: "Promedio Agua", value: `S/ ${promedioAgua.toFixed(2)}`,  icon: <Droplets className="w-5 h-5 text-sky-500"   />, bg: "bg-sky-50",     delay: "delay-150", colSpan: "col-span-1" },
         ].map(kpi => (
-          <div key={kpi.label} className={`animate-fade-up ${kpi.delay} ${card} p-5 flex items-center gap-4`}>
-            <div className={`w-11 h-11 rounded-[12px] ${kpi.bg} flex items-center justify-center flex-shrink-0`}>
+          <div key={kpi.label} className={`animate-fade-up ${kpi.delay} ${card} p-4 sm:p-5 flex items-center gap-3 sm:gap-4 ${kpi.colSpan}`}>
+            <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-[12px] ${kpi.bg} flex items-center justify-center flex-shrink-0`}>
               {kpi.icon}
             </div>
-            <div>
+            <div className="min-w-0">
               <p className={lbl}>{kpi.label}</p>
-              <p className={`text-[20px] font-bold ${tp} tracking-tight mt-0.5`}>{kpi.value}</p>
+              <p className={`text-[17px] sm:text-[20px] font-bold ${tp} tracking-tight mt-0.5 truncate`}>{kpi.value}</p>
             </div>
           </div>
         ))}
@@ -366,44 +376,49 @@ export default function GastosPage() {
             return (
               <div key={mes}>
                 {/* Separador de mes */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-[#1d1d1f] px-3 py-1 rounded-[8px] flex-shrink-0">
-                    <span className="text-[12px] font-semibold text-white capitalize">{fmesCorto(mes)}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-[#1d1d1f] px-3 py-1.5 rounded-[8px] flex-shrink-0 shadow-sm">
+                      <span className="text-[13px] font-semibold text-white capitalize">{fmesCorto(mes)}</span>
+                    </div>
+                    <h3 className={`text-[16px] font-bold ${tp} capitalize tracking-tight line-clamp-1`}>
+                      {fmesLargo(mes)}
+                    </h3>
+                    <div className="hidden sm:block flex-1 h-px bg-black/[0.06]" />
                   </div>
-                  <h3 className={`text-[15px] font-semibold ${tp} capitalize tracking-tight`}>
-                    {fmesLargo(mes)}
-                  </h3>
-                  <div className="flex-1 h-px bg-black/[0.06]" />
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  
+                  {/* Totales scrollables en móvil */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     {luzMes > 0 && (
-                      <div className="flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="text-[13px] font-semibold text-amber-600">S/ {luzMes.toFixed(2)}</span>
+                      <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100/50 px-2.5 py-1.5 rounded-[10px] flex-shrink-0">
+                        <Zap className="w-4 h-4 text-amber-500" />
+                        <span className="text-[13px] font-semibold text-amber-700 tracking-tight">S/ {luzMes.toFixed(2)}</span>
                       </div>
                     )}
                     {aguaMes > 0 && (
-                      <div className="flex items-center gap-1.5">
-                        <Droplets className="w-3.5 h-3.5 text-sky-500" />
-                        <span className="text-[13px] font-semibold text-sky-600">S/ {aguaMes.toFixed(2)}</span>
+                      <div className="flex items-center gap-1.5 bg-sky-50 border border-sky-100/50 px-2.5 py-1.5 rounded-[10px] flex-shrink-0">
+                        <Droplets className="w-4 h-4 text-sky-500" />
+                        <span className="text-[13px] font-semibold text-sky-700 tracking-tight">S/ {aguaMes.toFixed(2)}</span>
                       </div>
                     )}
-                    <div className="border-l border-black/[0.06] pl-3">
-                      <span className={`text-[15px] font-bold ${tp} tracking-tight`}>S/ {totalMes.toFixed(2)}</span>
+                    <div className="flex items-center gap-1.5 bg-[#f5f5f7] border border-black/[0.04] px-3 py-1.5 rounded-[10px] flex-shrink-0 ml-auto sm:ml-2">
+                      <span className={`text-[13px] font-bold ${tp} tracking-tight`}>Total: S/ {totalMes.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Grid de tarjetas — 1 col móvil, 2 cols sm+ */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Grid de tarjetas — Scroll horizontal en móvil, grid en sm+ */}
+                <div className="flex sm:grid sm:grid-cols-2 gap-4 overflow-x-auto snap-x snap-mandatory pb-4 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {gastosMes.map(gasto => (
-                    <GastoCard
-                      key={gasto._id}
-                      gasto={gasto}
-                      todosGastos={gastos}
-                      locales={locales}
-                      onEdit={handleEditarGasto}
-                      onDelete={confirmarEliminar}
-                    />
+                    <div key={gasto._id} className="min-w-[85vw] sm:min-w-0 snap-center flex-shrink-0">
+                      <GastoCard
+                        gasto={gasto}
+                        todosGastos={gastos}
+                        locales={locales}
+                        onEdit={handleEditarGasto}
+                        onDelete={confirmarEliminar}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
