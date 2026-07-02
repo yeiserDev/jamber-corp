@@ -64,7 +64,7 @@ export default function GastoCard({
     <div className={`h-full w-full bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]`}>
       
       {/* ── HEADER ── */}
-      <div className="p-6 pb-4">
+      <div className="p-5 pb-3">
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 rounded-[14px] ${themeBg} flex items-center justify-center`}>
@@ -89,10 +89,10 @@ export default function GastoCard({
       </div>
 
       {/* ── DISTRIBUCIÓN POR LOCAL ── */}
-      <div className="px-6 flex-1">
-        <p className="text-[12px] font-medium text-gray-400 mb-4">Distribución por local</p>
+      <div className="px-5 sm:px-6 flex-1">
+        <p className="text-[12px] font-medium text-gray-400 mb-3">Distribución por local</p>
         
-        <div className="space-y-4 relative z-10">
+        <div className="space-y-3 relative z-10">
           {localesACobrar.length === 0 ? (
              <p className="text-[13px] text-gray-500">Sin locales asignados</p>
           ) : (
@@ -137,7 +137,7 @@ export default function GastoCard({
       </div>
 
       {/* ── ILUSTRACIÓN DECORATIVA ── */}
-      <div className="relative h-24 mt-2 overflow-hidden pointer-events-none opacity-80">
+      <div className="relative h-16 sm:h-20 mt-1 overflow-hidden pointer-events-none opacity-80">
         {isLuz ? (
           <svg viewBox="0 0 600 120" className="absolute bottom-0 w-full h-full text-amber-100" preserveAspectRatio="xMidYMax slice">
              {/* Nubes */}
@@ -240,8 +240,8 @@ export default function GastoCard({
       </div>
 
       {/* ── FOOTER: RESUMEN Y BOTONES ── */}
-      <div className="px-6 pt-4 pb-6 bg-white border-t border-gray-50 relative z-10">
-        <div className="flex items-center justify-between mb-4">
+      <div className="px-5 pt-3 pb-4 bg-white border-t border-gray-50 relative z-10">
+        <div className="flex items-center justify-between mb-3">
            <div>
              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Total consumido</p>
              <p className="text-[15px] font-bold text-gray-900 mt-0.5">{gasto.consumoTotal.toFixed(1)} {unit}</p>

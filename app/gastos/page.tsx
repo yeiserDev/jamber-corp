@@ -55,30 +55,8 @@ export default function GastosPage() {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
-    const carousel = kpiCarouselRef.current;
-    if (!carousel) return;
-
-    let intervalId: NodeJS.Timeout;
-    const startAutoScroll = () => {
-      intervalId = setInterval(() => {
-        if (window.innerWidth >= 768) return; // Sólo en móvil
-        
-        const scrollWidth = carousel.scrollWidth;
-        const maxScroll = scrollWidth - carousel.clientWidth;
-        if (maxScroll <= 0) return;
-
-        let newScrollLeft = carousel.scrollLeft + carousel.clientWidth * 0.8; 
-        if (newScrollLeft >= maxScroll - 10) {
-            newScrollLeft = 0; // Volver al inicio si ya llegó al final
-        }
-        carousel.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
-      }, 4000); // Girar cada 4 segundos
-    };
-
-    startAutoScroll();
-    return () => clearInterval(intervalId);
-  }, [loading]);
+    // KPI Carousel auto-scroll removed as it's now hidden on mobile
+  }, []);
 
   const cargarDatos = async () => {
     try {
@@ -393,7 +371,7 @@ export default function GastosPage() {
         </div>
 
         {/* ── KPI CARDS ── */}
-        <div ref={kpiCarouselRef} className="flex overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory gap-4 md:grid md:grid-cols-3 md:gap-4 md:overflow-visible md:px-0 md:mx-0 md:pb-0 mb-8 hide-scrollbar">
+        <div ref={kpiCarouselRef} className="hidden md:grid md:grid-cols-3 md:gap-4 mb-8">
           {/* Card 1 */}
           <div className="w-[85vw] sm:w-[300px] flex-shrink-0 snap-center md:w-auto md:flex-shrink md:snap-align-none bg-white rounded-3xl p-6 border border-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] flex items-start gap-4">
             <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0 border border-green-100">
@@ -466,96 +444,107 @@ export default function GastosPage() {
           </div>
         </div>
 
-        {/* ── RESUMEN DEL MES (Donut Chart visual) ── */}
+        {/* ── RESUMEN DEL MES (Premium Layout) ── */}
         {(filtroMes || mesesOrdenados.length > 0) && (
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] mb-10 flex flex-col sm:flex-row sm:items-center gap-8">
-            <div className="flex-shrink-0">
-              <h2 className="text-[18px] font-bold text-gray-900 tracking-tight">Resumen del mes</h2>
-              <div className="relative mt-0.5">
-                <button
-                  onClick={() => setOpenDropdownResumen(!openDropdownResumen)}
-                  className="flex items-center gap-1 text-[14px] font-medium text-gray-500 hover:text-gray-900 transition-colors capitalize group"
-                >
-                  {fmesLargo(filtroMes || (mesesOrdenados.length > 0 ? mesesOrdenados[0] : ""))}
-                  <ChevronDown className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600" />
-                </button>
-
-                {openDropdownResumen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownResumen(false)}></div>
-                    <div className="absolute left-0 mt-2 w-[200px] bg-white rounded-2xl shadow-[0_10px_40px_rgb(0,0,0,0.08)] border border-gray-100 z-50 overflow-hidden py-2 animate-fade-down">
-                      {mesesUnicos.map(m => (
-                        <button
-                          key={m}
-                          onClick={() => { setFiltroMes(m); setOpenDropdownResumen(false); }}
-                          className={`w-full text-left px-4 py-2.5 text-[14px] font-medium transition-colors capitalize ${filtroMes === m ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
-                        >
-                          {fmesLargo(m)}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-10 overflow-hidden relative">
+            {/* Fondo sutil */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-amber-50 rounded-full blur-3xl opacity-50 -mr-20 -mt-20 pointer-events-none"></div>
             
-            {(() => {
-              const mesSeleccionado = filtroMes || mesesOrdenados[0];
-              const gMes = gastosPorMes[mesSeleccionado] || [];
-              const tMes = gMes.reduce((s, g) => s + g.montoTotal, 0);
-              const lMes = gMes.filter(g => g.tipo === "luz").reduce((s, g) => s + g.montoTotal, 0);
-              const aMes = gMes.filter(g => g.tipo === "agua").reduce((s, g) => s + g.montoTotal, 0);
-              const pLuz = tMes > 0 ? (lMes / tMes) * 100 : 0;
-              const pAgua = tMes > 0 ? (aMes / tMes) * 100 : 0;
+            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-8">
+              {/* Header */}
+              <div className="flex-shrink-0">
+                <h2 className="text-[20px] font-bold text-gray-900 tracking-tight">Resumen del mes</h2>
+                <div className="relative mt-2">
+                  <button
+                    onClick={() => setOpenDropdownResumen(!openDropdownResumen)}
+                    className="flex items-center gap-1.5 text-[15px] font-semibold text-blue-600 hover:text-blue-700 transition-colors capitalize group bg-blue-50/50 px-3 py-1.5 rounded-lg border border-blue-100/50"
+                  >
+                    {fmesLargo(filtroMes || (mesesOrdenados.length > 0 ? mesesOrdenados[0] : ""))}
+                    <ChevronDown className="w-4 h-4 text-blue-500 group-hover:text-blue-600" />
+                  </button>
 
-              return (
-                <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 flex-1 w-full">
-                  {/* CSS Donut Chart representation */}
-                  <div className="relative w-28 h-28 sm:w-24 sm:h-24 flex-shrink-0">
-                    <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90">
-                      <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#0ea5e9" strokeWidth="6" />
-                      <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#f59e0b" strokeWidth="6" strokeDasharray={`${pLuz} ${100 - pLuz}`} strokeDashoffset="0" />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <PieChart className="w-6 h-6 text-gray-300" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:flex sm:flex-1 items-center gap-4 sm:gap-8 justify-between w-full">
-                    <div className="flex items-center gap-2 sm:gap-4 col-span-1">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
-                        <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
+                  {openDropdownResumen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownResumen(false)}></div>
+                      <div className="absolute left-0 mt-2 w-[220px] bg-white rounded-2xl shadow-[0_10px_40px_rgb(0,0,0,0.12)] border border-gray-100 z-50 overflow-hidden py-2 animate-fade-down">
+                        {mesesUnicos.map(m => (
+                          <button
+                            key={m}
+                            onClick={() => { setFiltroMes(m); setOpenDropdownResumen(false); }}
+                            className={`w-full text-left px-5 py-3 text-[14px] font-medium transition-colors capitalize ${filtroMes === m ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            {fmesLargo(m)}
+                          </button>
+                        ))}
                       </div>
-                      <div>
-                        <p className="text-[11px] sm:text-[13px] font-medium text-gray-500">Electricidad</p>
-                        <p className="text-[14px] sm:text-[16px] font-bold text-gray-900 tracking-tight">S/ {lMes.toFixed(2)}</p>
-                        <p className="text-[10px] sm:text-[11px] font-medium text-gray-400 mt-0.5">{pLuz.toFixed(1)}%<span className="hidden sm:inline"> del total</span></p>
-                      </div>
-                    </div>
-
-                    <div className="w-px h-12 bg-gray-100 hidden sm:block"></div>
-
-                    <div className="flex items-center gap-2 sm:gap-4 col-span-1">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-sky-50 flex items-center justify-center flex-shrink-0">
-                        <Droplets className="w-4 h-4 sm:w-5 sm:h-5 text-sky-500" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] sm:text-[13px] font-medium text-gray-500">Agua</p>
-                        <p className="text-[14px] sm:text-[16px] font-bold text-gray-900 tracking-tight">S/ {aMes.toFixed(2)}</p>
-                        <p className="text-[10px] sm:text-[11px] font-medium text-gray-400 mt-0.5">{pAgua.toFixed(1)}%<span className="hidden sm:inline"> del total</span></p>
-                      </div>
-                    </div>
-
-                    <div className="w-px h-12 bg-gray-100 hidden sm:block"></div>
-
-                    <div className="text-center sm:text-right col-span-2 mt-2 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-0 border-gray-100">
-                      <p className="text-[12px] sm:text-[13px] font-medium text-gray-500">Total del mes</p>
-                      <p className="text-[18px] sm:text-[20px] font-bold text-gray-900 tracking-tight mt-0.5">S/ {tMes.toFixed(2)}</p>
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </div>
-              );
-            })()}
+              </div>
+              
+              {/* Data Layout */}
+              {(() => {
+                const mesSeleccionado = filtroMes || mesesOrdenados[0];
+                const gMes = gastosPorMes[mesSeleccionado] || [];
+                const tMes = gMes.reduce((s, g) => s + g.montoTotal, 0);
+                const lMes = gMes.filter(g => g.tipo === "luz").reduce((s, g) => s + g.montoTotal, 0);
+                const aMes = gMes.filter(g => g.tipo === "agua").reduce((s, g) => s + g.montoTotal, 0);
+                const pLuz = tMes > 0 ? (lMes / tMes) * 100 : 0;
+                const pAgua = tMes > 0 ? (aMes / tMes) * 100 : 0;
+
+                return (
+                  <div className="flex-1 w-full max-w-3xl">
+                    <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-10 w-full">
+                      
+                      {/* Metric 1 */}
+                      <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center flex-shrink-0 border border-amber-100/50">
+                          <Zap className="w-6 h-6 text-amber-500" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-gray-500 mb-0.5">Electricidad</p>
+                          <p className="text-[22px] font-bold text-gray-900 tracking-tight leading-none">S/ {lMes.toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="w-px h-12 bg-gray-100 hidden sm:block"></div>
+
+                      {/* Metric 2 */}
+                      <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <div className="w-12 h-12 rounded-2xl bg-sky-50 flex items-center justify-center flex-shrink-0 border border-sky-100/50">
+                          <Droplets className="w-6 h-6 text-sky-500" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-gray-500 mb-0.5">Agua</p>
+                          <p className="text-[22px] font-bold text-gray-900 tracking-tight leading-none">S/ {aMes.toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Total Panel */}
+                      <div className="sm:ml-auto text-left sm:text-right w-full sm:w-auto bg-gray-50/80 px-5 py-3.5 rounded-2xl border border-gray-100">
+                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Mensual</p>
+                        <p className="text-[26px] font-black text-gray-900 tracking-tighter leading-none">S/ {tMes.toFixed(2)}</p>
+                      </div>
+                    </div>
+
+                    {/* Horizontal Progress Bar Breakdown */}
+                    {tMes > 0 && (
+                      <div className="mt-7">
+                        <div className="flex justify-between text-[12px] font-semibold text-gray-400 mb-2 px-1">
+                          <span className="text-amber-600/80">{pLuz.toFixed(1)}% Luz</span>
+                          <span className="text-sky-600/80">{pAgua.toFixed(1)}% Agua</span>
+                        </div>
+                        <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden flex">
+                          <div className="h-full bg-amber-400 transition-all duration-1000 ease-out" style={{ width: `${pLuz}%` }}></div>
+                          <div className="h-full bg-sky-400 transition-all duration-1000 ease-out" style={{ width: `${pAgua}%` }}></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 
