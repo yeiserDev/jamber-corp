@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Plus, Zap, Droplets, Receipt, Trash2, Building2 , Calendar, ChevronDown, ChevronUp, PieChart, TrendingUp, TrendingDown, Lightbulb, ChevronRight} from "lucide-react";
+import { Plus, Zap, Droplets, Receipt, Trash2, Building2 , Calendar, ChevronDown, ChevronUp, PieChart, TrendingUp, TrendingDown, Lightbulb, ChevronRight, CalendarCheck, Home, Store, Dumbbell, Sparkles} from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import ModalNuevoGasto from "./ModalNuevoGasto";
 import GastoCard from "@/components/gastos/GastoCard";
@@ -16,6 +16,27 @@ const fmesLargo = (m: string) =>
 const fmesCorto = (m: string) =>
   new Date(m + "-02").toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
 
+const colorLocal = (nombre: string, tipo: string, idx: number) => {
+  const colors = [
+    { hex: '#a855f7', badge: 'text-purple-600 bg-purple-50' }, // purple
+    { hex: '#f59e0b', badge: 'text-amber-600 bg-amber-50' },   // amber
+    { hex: '#3b82f6', badge: 'text-blue-600 bg-blue-50' },     // blue
+    { hex: '#10b981', badge: 'text-green-600 bg-green-50' },   // green
+    { hex: '#ec4899', badge: 'text-pink-600 bg-pink-50' },     // pink
+  ];
+  if (nombre.toLowerCase().includes('casa')) return { hex: '#64748b', badge: 'text-slate-600 bg-slate-50' };
+  return colors[idx % colors.length];
+};
+
+const LocalIcon = ({ nombre }: { nombre: string }) => {
+  const n = nombre.toLowerCase();
+  if (n.includes('casa')) return <Home className="w-4 h-4" />;
+  if (n.includes('panadería') || n.includes('panaderia')) return <Store className="w-4 h-4" />;
+  if (n.includes('spa')) return <Sparkles className="w-4 h-4" />;
+  if (n.includes('academia')) return <Dumbbell className="w-4 h-4" />;
+  return <Building2 className="w-4 h-4" />;
+};
+
 export default function GastosPage() {
   const [gastos,          setGastos]          = useState<Gasto[]>([]);
   const [locales,         setLocales]         = useState<Local[]>([]);
@@ -25,9 +46,36 @@ export default function GastosPage() {
   const [filtroMes,       setFiltroMes]       = useState("");
   const [openDropdownGlobal, setOpenDropdownGlobal] = useState(false);
   const [openDropdownResumen, setOpenDropdownResumen] = useState(false);
+  const [openDropdownLocales, setOpenDropdownLocales] = useState(false);
+  const [openDropdownAnios, setOpenDropdownAnios] = useState(false);
+  const [filtroLocal, setFiltroLocal] = useState<string>("Todos los locales");
   const [gastoEditando,   setGastoEditando]   = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [gastoAEliminar,  setGastoAEliminar]  = useState<string | null>(null);
+  const [gastoToEdit, setGastoToEdit] = useState<any>(null);
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenModal = () => setIsCalendarModalOpen(true);
+    window.addEventListener("open-calendar-modal", handleOpenModal);
+    return () => window.removeEventListener("open-calendar-modal", handleOpenModal);
+  }, []);
+
+  const mesesConDatos = useMemo(() => {
+    const s = new Set<string>();
+    gastos.forEach(g => {
+      s.add(g.mes);
+    });
+    return s;
+  }, [gastos]);
+  
+  const mesActualIdx = new Date().getMonth();
+  const [filtroAnio, setFiltroAnio] = useState<string>(new Date().getFullYear().toString());
+
+  const aniosConDatos = Array.from(new Set(gastos.map(g => g.mes.split("-")[0])));
+  if (aniosConDatos.length === 0) aniosConDatos.push(new Date().getFullYear().toString());
+  if (!aniosConDatos.includes(filtroAnio)) aniosConDatos.push(filtroAnio);
+  aniosConDatos.sort().reverse();
 
   // Form state
   const [mes,          setMes]          = useState("");
@@ -226,8 +274,17 @@ export default function GastosPage() {
   const mesesUnicos     = Array.from(new Set(gastos.map(g => g.mes))).sort().reverse();
 
   /* ── Derived ─────────────────────────────────────────── */
-  const gastosFiltr = gastos
-    .filter(g => (filtroTipo === "todos" || g.tipo === filtroTipo) && (!filtroMes || g.mes === filtroMes))
+  const gastosPreLocal = gastos
+    .filter(g => (filtroTipo === "todos" || g.tipo === filtroTipo) && (!filtroMes || g.mes === filtroMes));
+
+  const gastosFiltr = gastosPreLocal
+    .filter(g => {
+      if (filtroLocal === "Todos los locales") return true;
+      return g.costosPorLocal?.some(c => {
+        const id = typeof c.localId === "string" ? c.localId : c.localId._id;
+        return id === filtroLocal;
+      });
+    })
     .sort((a, b) => b.mes.localeCompare(a.mes));
 
   const gastosPorMes     = gastosFiltr.reduce<Record<string, typeof gastosFiltr>>((acc, g) => {
@@ -329,9 +386,11 @@ export default function GastosPage() {
     <DashboardLayout title="">
       <Toaster position="top-right" toastOptions={{ style: { borderRadius: "14px", fontSize: "13px", fontFamily: "var(--font-inter)", color: "#1d1d1f" } }} />
 
-      <div className="animate-fade-up max-w-[1200px] mx-auto pb-10">
+      <div className="animate-fade-up max-w-[1400px] mx-auto pb-10 flex flex-col xl:flex-row gap-8">
         
-        {/* ── HEADER & MES GLOBAL ── */}
+        {/* ── COLUMNA PRINCIPAL (Gastos) ── */}
+        <div className="flex-1 min-w-0">
+          {/* ── HEADER & MES GLOBAL ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-end mb-8 gap-4">
           <div className="relative">
             <button 
@@ -431,12 +490,6 @@ export default function GastosPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center bg-white border border-gray-200 rounded-[10px] px-3 py-2 shadow-sm">
-              <select className="text-[12px] font-medium text-gray-600 bg-transparent border-none outline-none cursor-pointer pr-4 appearance-none">
-                <option>Todos los locales</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400 -ml-2 pointer-events-none" />
-            </div>
             <div className="flex items-center bg-white border border-gray-200 rounded-[10px] px-3 py-2 shadow-sm gap-2">
               <Receipt className="w-3.5 h-3.5 text-gray-400" />
               <span className="text-[12px] font-medium text-gray-600">{gastosFiltr.length} registros</span>
@@ -484,11 +537,17 @@ export default function GastosPage() {
               
               {/* Data Layout */}
               {(() => {
+                const getMontoGasto = (g: typeof gastosFiltr[0]) => {
+                  if (filtroLocal === "Todos los locales") return g.montoTotal;
+                  const costoItem = g.costosPorLocal?.find(c => (typeof c.localId === 'string' ? c.localId : c.localId._id) === filtroLocal);
+                  return costoItem ? costoItem.monto : 0;
+                };
+
                 const mesSeleccionado = filtroMes || mesesOrdenados[0];
                 const gMes = gastosPorMes[mesSeleccionado] || [];
-                const tMes = gMes.reduce((s, g) => s + g.montoTotal, 0);
-                const lMes = gMes.filter(g => g.tipo === "luz").reduce((s, g) => s + g.montoTotal, 0);
-                const aMes = gMes.filter(g => g.tipo === "agua").reduce((s, g) => s + g.montoTotal, 0);
+                const tMes = gMes.reduce((s, g) => s + getMontoGasto(g), 0);
+                const lMes = gMes.filter(g => g.tipo === "luz").reduce((s, g) => s + getMontoGasto(g), 0);
+                const aMes = gMes.filter(g => g.tipo === "agua").reduce((s, g) => s + getMontoGasto(g), 0);
                 const pLuz = tMes > 0 ? (lMes / tMes) * 100 : 0;
                 const pAgua = tMes > 0 ? (aMes / tMes) * 100 : 0;
 
@@ -606,8 +665,10 @@ export default function GastosPage() {
                       <div key={gasto._id} className="h-full w-[85vw] sm:w-[400px] flex-shrink-0 snap-center lg:w-auto lg:flex-shrink lg:snap-align-none">
                         <GastoCard
                           gasto={gasto}
-                          todosGastos={gastos}
+                          todosGastos={gastosFiltr}
                           locales={locales}
+                          filtroLocal={filtroLocal}
+                          userRole={userRole}
                           onEdit={handleEditarGasto}
                           onDelete={confirmarEliminar}
                         />
@@ -620,27 +681,222 @@ export default function GastosPage() {
           </div>
         )}
 
-        {/* ── CONSEJO DEL MES ── */}
-        <div className="mt-12 bg-green-50 rounded-3xl p-6 border border-green-100 flex flex-col md:flex-row md:items-center gap-6 relative overflow-hidden">
-          <div className="absolute -left-4 -bottom-4 opacity-50">
-            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22c4-4 8-6 8-12a8 8 0 0 0-16 0c0 6 4 8 8 12z"/>
-              <path d="M12 22V12"/>
-            </svg>
-          </div>
-          <div className="relative z-10 flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Lightbulb className="w-5 h-5 text-green-600" />
-              <h4 className="text-[15px] font-bold text-green-800">Consejo del mes</h4>
+        {/* ── CONSEJO DEL MES (Premium con Banner Árbol) ── */}
+        <div className="hidden xl:block mt-10 relative overflow-hidden rounded-3xl shadow-[0_10px_30px_rgb(0,0,0,0.05)] border border-gray-100 bg-white">
+           {/* Background Image */}
+           <div 
+             className="absolute inset-0 z-0 bg-cover bg-right"
+             style={{ backgroundImage: 'url(/assets/eco_tree.png)' }}
+           ></div>
+           
+           {/* Gradient Overlay to seamlessly blend image with white background */}
+           <div className="absolute inset-0 z-0 bg-white/70 backdrop-blur-sm md:backdrop-blur-none md:bg-gradient-to-r md:from-white md:via-white/95 md:to-white/10"></div>
+           
+           <div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center gap-6 relative z-10 h-full">
+              
+              <div className="w-14 h-14 rounded-2xl bg-white border border-gray-100/60 flex items-center justify-center flex-shrink-0 shadow-[0_4px_15px_rgba(0,0,0,0.05)]">
+                 <Lightbulb className="w-7 h-7 text-green-600" />
+              </div>
+              
+              <div className="flex-1">
+                 <h4 className="text-[18px] font-bold text-gray-900 tracking-tight mb-1">Impacto Ambiental</h4>
+                 <p className="text-[14px] text-gray-600 font-medium leading-relaxed max-w-xl">
+                   El consumo de electricidad en <span className="font-bold text-green-700">Panadería</span> es alto. Revisa oportunidades de ahorro energético para reducir tu huella de carbono.
+                 </p>
+              </div>
+              
+              <button className="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-xl text-[14px] font-bold flex items-center justify-center gap-2 transition-all self-start md:self-center flex-shrink-0 shadow-[0_4px_20px_rgba(22,163,74,0.4)] hover:shadow-[0_4px_25px_rgba(22,163,74,0.5)] hover:-translate-y-0.5 mt-2 md:mt-0 relative z-10 border border-green-500/50">
+                 Ver recomendaciones
+                 <ChevronRight className="w-4 h-4" />
+              </button>
+           </div>
+        </div>
+
+        </div>
+
+        {/* ── COLUMNA DERECHA (Dashboard Elements) ── */}
+        <div className="hidden xl:flex w-full xl:w-[320px] flex-shrink-0 flex-col gap-6">
+          {/* Cobertura del año (Oculto en mobile, reemplazado por modal) */}
+          <div className="hidden md:block bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <CalendarCheck className="w-5 h-5 text-blue-600" />
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-gray-900 text-[16px] tracking-tight">Cobertura</h3>
+                <div className="relative">
+                  <button
+                    onClick={() => setOpenDropdownAnios(!openDropdownAnios)}
+                    className="flex items-center gap-1.5 bg-blue-50 text-blue-700 font-bold text-[14px] rounded-lg px-2.5 py-1 outline-none cursor-pointer hover:bg-blue-100 transition-colors"
+                  >
+                    {filtroAnio}
+                    <ChevronDown className="w-4 h-4 opacity-70" />
+                  </button>
+
+                  {openDropdownAnios && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownAnios(false)}></div>
+                      <div className="absolute left-0 mt-2 w-[100px] bg-white rounded-[12px] shadow-[0_10px_40px_rgb(0,0,0,0.12)] border border-gray-100 z-50 overflow-hidden py-1.5 animate-fade-down">
+                        {aniosConDatos.map(a => (
+                          <button
+                            key={a}
+                            onClick={() => { setFiltroAnio(a); setOpenDropdownAnios(false); }}
+                            className={`w-full text-left px-4 py-2 text-[14px] font-semibold transition-colors ${filtroAnio === a ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
+                          >
+                            {a}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
-            <p className="text-[14px] text-green-700 font-medium">
-              El consumo de electricidad en Panadería representa gran parte del total. Revisa oportunidades de ahorro en este local.
-            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 12 }, (_, i) => {
+                const key   = `${filtroAnio}-${String(i + 1).padStart(2, "0")}`;
+                const tiene = mesesConDatos.has(key);
+                const futuro = filtroAnio === new Date().getFullYear().toString() && i > mesActualIdx;
+                const isSelected = filtroMes === key;
+                const nombre = new Date(`${filtroAnio}-${String(i + 1).padStart(2, "0")}-02`)
+                  .toLocaleDateString("es-ES", { month: "short" });
+                
+                return (
+                  <button 
+                    key={i} 
+                    onClick={() => {
+                       if (tiene) {
+                         setFiltroMes(key);
+                         window.scrollTo({ top: 0, behavior: 'smooth' });
+                       }
+                    }}
+                    className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all outline-none ${
+                    futuro  ? "opacity-30 cursor-default" :
+                    tiene   ? `cursor-pointer hover:scale-105 hover:shadow-sm ${isSelected ? 'bg-green-100 ring-2 ring-green-500 shadow-md scale-105' : 'bg-green-50 hover:bg-green-100 border border-green-100/50'}` : 
+                    "bg-amber-50 cursor-default"
+                  }`}>
+                    <div className={`w-2.5 h-2.5 rounded-full ${futuro ? "bg-gray-300" : tiene ? "bg-green-500" : "bg-amber-400"}`} />
+                    <span className={`text-[10px] font-bold uppercase ${futuro ? "text-gray-400" : tiene ? "text-green-700" : "text-amber-600"}`}>{nombre}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-green-500 rounded-full" /><span className="text-[11px] text-gray-500 font-medium">Con datos</span></div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-amber-400 rounded-full" /><span className="text-[11px] text-gray-500 font-medium">Sin registro</span></div>
+            </div>
           </div>
-          <button className="relative z-10 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-full text-[14px] font-semibold flex items-center gap-2 transition-all self-start md:self-center">
-            Ver recomendaciones
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          
+          {/* Locales activos */}
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6">
+            <h3 className="font-bold text-gray-900 text-[16px] tracking-tight mb-4">Locales del Sistema</h3>
+            <div className="space-y-2.5">
+              {/* Opción: Todos los locales */}
+              {(() => {
+                const mesSeleccionado = filtroMes || (mesesOrdenados.length > 0 ? mesesOrdenados[0] : null);
+                const gastosParaMes = mesSeleccionado ? gastosPreLocal.filter(g => g.mes === mesSeleccionado) : [];
+                const montoTotalMes = gastosParaMes.reduce((s, g) => s + g.montoTotal, 0);
+                const isSelected = filtroLocal === "Todos los locales";
+
+                return (
+                  <button 
+                    onClick={() => setFiltroLocal("Todos los locales")}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all text-left mb-4 ${isSelected ? 'bg-gray-900 border-gray-900 shadow-md scale-[1.02]' : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 shadow-sm ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className={`text-[14px] font-semibold leading-tight ${isSelected ? 'text-white' : 'text-gray-900'}`}>Vista General</p>
+                        <p className={`text-[12px] font-bold mt-0.5 ${isSelected ? 'text-gray-400' : 'text-gray-500'}`}>S/ {montoTotalMes.toFixed(2)}</p>
+                      </div>
+                    </div>
+                    {isSelected && <div className="w-2 h-2 rounded-full bg-green-400 mr-1 flex-shrink-0 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />}
+                  </button>
+                );
+              })()}
+              
+              {locales.map((l, idx) => {
+                const c = colorLocal(l.nombre, l.tipo, idx);
+                const mesSeleccionado = filtroMes || (mesesOrdenados.length > 0 ? mesesOrdenados[0] : null);
+                const gastosParaMes = mesSeleccionado ? gastosPreLocal.filter(g => g.mes === mesSeleccionado) : [];
+                
+                const montoLocal = gastosParaMes.reduce((s, g) => {
+                  const costoItem = g.costosPorLocal?.find(c => (typeof c.localId === 'string' ? c.localId : c.localId._id) === l._id);
+                  return s + (costoItem ? costoItem.monto : 0);
+                }, 0);
+
+                const isSelected = filtroLocal === l._id;
+
+                return (
+                  <button 
+                    key={l._id} 
+                    onClick={() => setFiltroLocal(isSelected ? "Todos los locales" : l._id)}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all text-left ${isSelected ? 'bg-blue-50 border-blue-200 shadow-sm scale-[1.02]' : 'bg-gray-50 border-gray-100/60 hover:border-gray-200 hover:bg-gray-100/80'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.04)]" style={{ backgroundColor: `${c.hex}15`, color: c.hex }}>
+                        <LocalIcon nombre={l.nombre} />
+                      </div>
+                      <div>
+                        <p className={`text-[14px] font-semibold leading-tight ${isSelected ? 'text-blue-700' : 'text-gray-800'}`}>{l.nombre}</p>
+                        <p className="text-[12px] font-bold text-gray-500 mt-0.5">S/ {montoLocal.toFixed(2)}</p>
+                      </div>
+                    </div>
+                    {isSelected && <div className="w-2 h-2 rounded-full bg-blue-500 mr-1 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+              {locales.length === 0 && <p className="text-[13px] text-gray-500 text-center py-2">Sin locales</p>}
+            </div>
+          </div>
+          
+          {/* Guía Rápida Moderna */}
+          <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 relative overflow-hidden">
+            <h3 className="font-bold text-gray-900 text-[16px] tracking-tight mb-6 flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-amber-500" />
+              ¿Cómo usar el sistema?
+            </h3>
+            
+            <div className="relative">
+              {/* Línea conectora */}
+              <div className="absolute left-[19px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-blue-100 via-purple-100 to-emerald-100 z-0"></div>
+              
+              <div className="space-y-6 relative z-10">
+                {/* Paso 1 */}
+                <div className="flex gap-4 group">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-100/50 group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <div className="pt-0.5">
+                    <p className="text-[14px] font-bold text-gray-900">1. Registra</p>
+                    <p className="text-[12.5px] text-gray-500 mt-0.5 leading-snug">Añade facturas mensuales desde el botón superior.</p>
+                  </div>
+                </div>
+                
+                {/* Paso 2 */}
+                <div className="flex gap-4 group">
+                  <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm border border-purple-100/50 group-hover:scale-110 group-hover:bg-purple-500 group-hover:text-white transition-all duration-300">
+                    <CalendarCheck className="w-5 h-5" />
+                  </div>
+                  <div className="pt-0.5">
+                    <p className="text-[14px] font-bold text-gray-900">2. Explora</p>
+                    <p className="text-[12.5px] text-gray-500 mt-0.5 leading-snug">Usa el calendario para viajar a meses pasados.</p>
+                  </div>
+                </div>
+                
+                {/* Paso 3 */}
+                <div className="flex gap-4 group">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm border border-emerald-100/50 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div className="pt-0.5">
+                    <p className="text-[14px] font-bold text-gray-900">3. Filtra</p>
+                    <p className="text-[12.5px] text-gray-500 mt-0.5 leading-snug">Haz clic en un local para aislar su consumo.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -708,6 +964,88 @@ export default function GastosPage() {
           </div>
         </div>
       )}
+
+      {/* ── Modal de Calendario (Solo Mobile) ── */}
+      {isCalendarModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:hidden">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsCalendarModalOpen(false)} />
+          <div className="relative bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+             <div className="flex justify-between items-center mb-6">
+               <div className="flex items-center gap-2">
+                 <CalendarCheck className="w-5 h-5 text-blue-600" />
+                 <h3 className="font-bold text-gray-900 text-[18px]">Cobertura</h3>
+                 <div className="relative">
+                   <button
+                     onClick={() => setOpenDropdownAnios(!openDropdownAnios)}
+                     className="flex items-center gap-1.5 bg-blue-50 text-blue-700 font-bold text-[16px] rounded-lg px-3 py-1.5 outline-none cursor-pointer hover:bg-blue-100 transition-colors"
+                   >
+                     {filtroAnio}
+                     <ChevronDown className="w-4 h-4 opacity-70" />
+                   </button>
+
+                   {openDropdownAnios && (
+                     <>
+                       <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownAnios(false)}></div>
+                       <div className="absolute left-0 mt-2 w-[110px] bg-white rounded-[12px] shadow-[0_10px_40px_rgb(0,0,0,0.12)] border border-gray-100 z-50 overflow-hidden py-1.5 animate-fade-down">
+                         {aniosConDatos.map(a => (
+                           <button
+                             key={a}
+                             onClick={() => { setFiltroAnio(a); setOpenDropdownAnios(false); }}
+                             className={`w-full text-left px-4 py-2.5 text-[15px] font-semibold transition-colors ${filtroAnio === a ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
+                           >
+                             {a}
+                           </button>
+                         ))}
+                       </div>
+                     </>
+                   )}
+                 </div>
+               </div>
+               <button onClick={() => setIsCalendarModalOpen(false)} className="text-gray-400 hover:text-gray-900 p-1 bg-gray-100 rounded-full">
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+               </button>
+             </div>
+             
+             {/* Grilla de meses */}
+             <div className="grid grid-cols-4 gap-3">
+              {Array.from({ length: 12 }, (_, i) => {
+                const key   = `${filtroAnio}-${String(i + 1).padStart(2, "0")}`;
+                const tiene = mesesConDatos.has(key);
+                const futuro = filtroAnio === new Date().getFullYear().toString() && i > mesActualIdx;
+                const isSelected = filtroMes === key;
+                const nombre = new Date(`${filtroAnio}-${String(i + 1).padStart(2, "0")}-02`)
+                  .toLocaleDateString("es-ES", { month: "short" });
+                
+                return (
+                  <button 
+                    key={i} 
+                    onClick={() => {
+                       if (tiene) {
+                         setFiltroMes(key);
+                         setIsCalendarModalOpen(false);
+                         window.scrollTo({ top: 0, behavior: 'smooth' });
+                       }
+                    }}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all outline-none ${
+                    futuro  ? "opacity-30 cursor-default" :
+                    tiene   ? `cursor-pointer active:scale-95 ${isSelected ? 'bg-green-100 ring-2 ring-green-500 shadow-md scale-105' : 'bg-green-50 active:bg-green-100 border border-green-100/50'}` : 
+                    "bg-amber-50 cursor-default"
+                  }`}>
+                    <div className={`w-3 h-3 rounded-full ${futuro ? "bg-gray-300" : tiene ? "bg-green-500" : "bg-amber-400"}`} />
+                    <span className={`text-[11px] font-bold uppercase ${futuro ? "text-gray-400" : tiene ? "text-green-700" : "text-amber-600"}`}>{nombre}</span>
+                  </button>
+                );
+              })}
+             </div>
+             
+             <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
+               <div className="flex items-center gap-2"><div className="w-3 h-3 bg-green-500 rounded-full" /><span className="text-[12px] text-gray-500 font-medium">Con datos</span></div>
+               <div className="flex items-center gap-2"><div className="w-3 h-3 bg-amber-400 rounded-full" /><span className="text-[12px] text-gray-500 font-medium">Sin registro</span></div>
+             </div>
+          </div>
+        </div>
+      )}
+
     </DashboardLayout>
   );
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
 import bcrypt from 'bcryptjs';
+import { signToken } from '@/lib/auth/jwt';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +38,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Login exitoso — establecer cookie de sesión segura
+    // Login exitoso — generar JWT y establecer cookie de sesión segura
+    const token = await signToken({
+      id: user._id.toString(),
+      role: user.role,
+      username: user.username
+    });
+
     const response = NextResponse.json(
       {
         success: true,
@@ -51,7 +58,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    response.cookies.set('auth-session', String(user._id), {
+    response.cookies.set('auth-session', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

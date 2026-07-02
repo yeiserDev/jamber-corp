@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import Local from '@/lib/models/Local';
+import { cookies } from 'next/headers';
+import { verifyToken } from '@/lib/auth/jwt';
 
 // GET - Obtener todos los locales
 export async function GET() {
@@ -25,6 +27,18 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     await dbConnect();
+    
+    // Verificación de Admin
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-session')?.value;
+    if (!token) {
+      return NextResponse.json({ success: false, message: 'No autenticado' }, { status: 401 });
+    }
+    const payload = await verifyToken(token);
+    if (!payload || payload.role !== 'admin') {
+      return NextResponse.json({ success: false, message: 'No tienes permisos de administrador' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const local = await Local.create(body);
@@ -46,6 +60,18 @@ export async function POST(request: Request) {
 export async function DELETE() {
   try {
     await dbConnect();
+
+    // Verificación de Admin
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-session')?.value;
+    if (!token) {
+      return NextResponse.json({ success: false, message: 'No autenticado' }, { status: 401 });
+    }
+    const payload = await verifyToken(token);
+    if (!payload || payload.role !== 'admin') {
+      return NextResponse.json({ success: false, message: 'No tienes permisos de administrador' }, { status: 403 });
+    }
+
     const result = await Local.deleteMany({});
 
     return NextResponse.json({

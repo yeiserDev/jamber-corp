@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import { Zap, Droplets, Pencil, Trash2, Download, FileText, BarChart } from "lucide-react";
 import { Gasto, Local } from "@/types/gasto";
 import { generarReporteImagen } from "@/utils/reportGenerator";
-import { generarReporteProfesor } from "@/utils/reporteProfesor";
 
 interface GastoCardProps {
   gasto: Gasto;
   todosGastos: Gasto[];
   locales: Local[];
+  filtroLocal?: string;
+  userRole: string | null;
   onEdit: (gasto: Gasto) => void;
   onDelete: (id: string) => void;
 }
@@ -29,15 +30,11 @@ export default function GastoCard({
   gasto,
   todosGastos,
   locales,
+  filtroLocal,
+  userRole,
   onEdit,
   onDelete,
 }: GastoCardProps) {
-  const [userRole, setUserRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    setUserRole(localStorage.getItem("userRole"));
-  }, []);
-
   const isLuz = gasto.tipo === "luz";
   const unit  = isLuz ? "kWh" : "m³";
   const costoPorUnidad = gasto.consumoTotal > 0 ? gasto.montoTotal / gasto.consumoTotal : 0;
@@ -49,12 +46,26 @@ export default function GastoCard({
     return local && local.tipo !== "casa";
   });
 
-  const tieneProfesor = gasto.costosPorLocal.some(c => {
-    const local = typeof c.localId === "string"
-      ? locales.find(l => l._id === c.localId)
-      : c.localId;
-    return local && (local.tipo === "profesor" || local.nombre?.toLowerCase().includes("academia"));
-  });
+
+  // Si hay un filtro de local activo, ajustar los montos mostrados
+  let displayMontoTotal = gasto.montoTotal;
+  let displayConsumoTotal = gasto.consumoTotal;
+  let localesAmostrar = localesACobrar;
+
+  if (filtroLocal && filtroLocal !== "Todos los locales") {
+    const costoFiltered = gasto.costosPorLocal.find(c => {
+      const id = typeof c.localId === 'string' ? c.localId : c.localId._id;
+      return id === filtroLocal;
+    });
+    if (costoFiltered) {
+      displayMontoTotal = costoFiltered.monto;
+      displayConsumoTotal = costoFiltered.consumo;
+      localesAmostrar = localesACobrar.filter(c => {
+        const id = typeof c.localId === 'string' ? c.localId : c.localId._id;
+        return id === filtroLocal;
+      });
+    }
+  }
 
   const themeColor = isLuz ? "text-amber-500" : "text-sky-500";
   const themeBg    = isLuz ? "bg-amber-50" : "bg-sky-50";
@@ -75,14 +86,14 @@ export default function GastoCard({
                 {isLuz ? "Electricidad" : "Agua"}
               </h3>
               <p className="text-[13px] font-medium text-gray-500 mt-0.5">
-                {gasto.consumoTotal.toFixed(1)} {unit} &nbsp;·&nbsp; S/ {costoPorUnidad.toFixed(4)}/{unit}
+                {displayConsumoTotal.toFixed(1)} {unit} &nbsp;·&nbsp; S/ {costoPorUnidad.toFixed(4)}/{unit}
               </p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Total a cobrar</p>
             <p className={`text-[24px] font-black tracking-tighter leading-none ${themeColor}`}>
-              S/ {gasto.montoTotal.toFixed(2)}
+              S/ {displayMontoTotal.toFixed(2)}
             </p>
           </div>
         </div>
@@ -93,10 +104,10 @@ export default function GastoCard({
         <p className="text-[12px] font-medium text-gray-400 mb-3">Distribución por local</p>
         
         <div className="space-y-3 relative z-10">
-          {localesACobrar.length === 0 ? (
+          {localesAmostrar.length === 0 ? (
              <p className="text-[13px] text-gray-500">Sin locales asignados</p>
           ) : (
-            localesACobrar.map((costo, idx) => {
+            localesAmostrar.map((costo, idx) => {
               const local = typeof costo.localId === "string"
                 ? locales.find(l => l._id === costo.localId)
                 : costo.localId;
@@ -261,40 +272,25 @@ export default function GastoCard({
             Reporte
           </button>
 
-          {tieneProfesor ? (
-            <button
-              onClick={e => { e.stopPropagation(); generarReporteProfesor(gasto, todosGastos, locales); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-[12px] transition-all`}
-            >
-              <FileText className="w-4 h-4" />
-              Profesor
-            </button>
-          ) : (
-            <button
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-[12px] transition-all`}
-            >
-              <BarChart className="w-4 h-4" />
-              Detalle
-            </button>
-          )}
-
           {userRole === "admin" && (
-            <div className="flex gap-2 ml-auto">
+            <>
               <button
                 onClick={e => { e.stopPropagation(); onEdit(gasto); }}
                 title="Editar"
-                className="p-2.5 text-gray-400 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-[12px] transition-all"
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-[12px] transition-all`}
               >
                 <Pencil className="w-4 h-4" />
+                Editar
               </button>
               <button
                 onClick={e => { e.stopPropagation(); onDelete(gasto._id); }}
                 title="Eliminar"
-                className="p-2.5 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-[12px] transition-all"
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold text-red-600 bg-red-50 border border-red-100 hover:border-red-200 hover:bg-red-100 rounded-[12px] transition-all`}
               >
                 <Trash2 className="w-4 h-4" />
+                Eliminar
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>

@@ -8,7 +8,8 @@ import {
   Receipt,
   LogOut,
   Plus,
-  Lock
+  Lock,
+  Calendar
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -54,8 +55,8 @@ export default function Sidebar() {
   const isActive = (path: string) => pathname === path;
 
   const navItems = [
-    { href: "/",       label: "Dashboard",        icon: <LayoutDashboard className="w-[22px] h-[22px] stroke-[1.5] flex-shrink-0" /> },
     { href: "/gastos", label: "Gastos", icon: <Receipt         className="w-[22px] h-[22px] stroke-[1.5] flex-shrink-0" /> },
+    { href: "open-calendar-modal", label: "Calendario", icon: <Calendar className="w-[22px] h-[22px] stroke-[1.5] flex-shrink-0" />, isEvent: true },
   ];
 
   return (
@@ -72,7 +73,7 @@ export default function Sidebar() {
 
         {/* Nav principal */}
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto pb-4">
-          {navItems.map(({ href, label, icon }) => (
+          {navItems.filter(item => !item.isEvent).map(({ href, label, icon }) => (
             <Link
               key={href}
               href={href}
@@ -132,22 +133,39 @@ export default function Sidebar() {
         
         {/* Floating Nav Pill */}
         <nav className="flex-1 bg-white/95 backdrop-blur-xl border border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full flex items-center justify-around p-1.5 pointer-events-auto h-[60px]">
-          {navItems.map(({ href, label, icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center justify-center h-full rounded-full transition-all duration-300 ${
-                isActive(href)
-                  ? "bg-[#e5e5ea] text-[#1d1d1f] px-5 gap-2"
-                  : "text-[#86868b] hover:text-[#1d1d1f] px-3 w-12"
-              }`}
-            >
-              {icon}
-              <span className={`text-[14px] font-semibold tracking-tight whitespace-nowrap overflow-hidden transition-all duration-300 ${isActive(href) ? "w-auto opacity-100 ml-1.5" : "w-0 opacity-0 ml-0"}`}>
-                {label.split(" ")[0]}
-              </span>
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            if (item.isEvent) {
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => window.dispatchEvent(new CustomEvent(item.href))}
+                  className="flex items-center justify-center h-full rounded-full transition-all duration-300 text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#e5e5ea]/50 px-3 w-12"
+                  title={item.label}
+                >
+                  {item.icon}
+                  <span className="w-0 opacity-0 ml-0 text-[14px] font-semibold tracking-tight whitespace-nowrap overflow-hidden transition-all duration-300">
+                    {item.label.split(" ")[0]}
+                  </span>
+                </button>
+              );
+            }
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center justify-center h-full rounded-full transition-all duration-300 ${
+                  isActive(item.href)
+                    ? "bg-[#e5e5ea] text-[#1d1d1f] px-5 gap-2"
+                    : "text-[#86868b] hover:text-[#1d1d1f] px-3 w-12"
+                }`}
+              >
+                {item.icon}
+                <span className={`text-[14px] font-semibold tracking-tight whitespace-nowrap overflow-hidden transition-all duration-300 ${isActive(item.href) ? "w-auto opacity-100 ml-1.5" : "w-0 opacity-0 ml-0"}`}>
+                  {item.label.split(" ")[0]}
+                </span>
+              </Link>
+            );
+          })}
           
           {isAuth || userRole === "admin" ? (
             <button
