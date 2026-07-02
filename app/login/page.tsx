@@ -46,7 +46,7 @@ export default function LoginPage() {
         // Redirigir al dashboard
         router.push("/");
       } else {
-        setError(data.message || "Credenciales incorrectas");
+        setError(data.error ? `${data.message}: ${data.error}` : (data.message || "Credenciales incorrectas"));
         setLoading(false);
       }
     } catch (error) {

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error en login:', error);
     return NextResponse.json(
-      { success: false, message: 'Error interno del servidor' },
+      { success: false, message: 'Error interno del servidor', error: String(error) },
       { status: 500 }
     );
   }
