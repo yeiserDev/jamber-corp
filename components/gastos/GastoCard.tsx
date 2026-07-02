@@ -47,8 +47,8 @@ export default function GastoCard({
   });
 
 
-  // Si hay un filtro de local activo, ajustar los montos mostrados
-  let displayMontoTotal = gasto.montoTotal;
+  // Calcular el total real a cobrar (suma de los locales que pagan, excluyendo "casa")
+  let displayMontoTotal = localesACobrar.reduce((sum, c) => sum + c.monto, 0);
   let displayConsumoTotal = gasto.consumoTotal;
   let localesAmostrar = localesACobrar;
 
@@ -265,7 +265,7 @@ export default function GastoCard({
 
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={e => { e.stopPropagation(); generarReporteImagen(gasto, todosGastos, locales); }}
+            onClick={e => { e.stopPropagation(); generarReporteImagen(gasto, todosGastos, locales, filtroLocal); }}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-[12px] transition-all`}
           >
             <Download className="w-4 h-4" />

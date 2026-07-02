@@ -15,7 +15,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: n
     ctx.closePath();
 }
 
-export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], locales: Local[]): Promise<void> => {
+export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], locales: Local[], filtroLocal?: string | null): Promise<void> => {
     const calcularCostoPorUnidad = (g: Gasto): number => {
         if (g.consumoTotal === 0) return 0;
         return g.montoTotal / g.consumoTotal;
@@ -28,13 +28,29 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
 
     const localesACobrar = gasto.costosPorLocal.filter(c => {
         const local = typeof c.localId === 'string' ? locales.find(l => l._id === c.localId) : c.localId;
-        return local && local.tipo !== 'casa';
+        const localId = typeof c.localId === 'string' ? c.localId : c.localId._id;
+        const matchesFilter = !filtroLocal || filtroLocal === "Todos los locales" || localId === filtroLocal;
+        return local && local.tipo !== 'casa' && matchesFilter;
     }).sort((a, b) => b.monto - a.monto);
+
+    const isSpecificLocal = localesACobrar.length === 1 && filtroLocal && filtroLocal !== "Todos los locales";
+    const totalACobrar = localesACobrar.reduce((sum, c) => sum + c.monto, 0);
+    const totalConsumo = localesACobrar.reduce((sum, c) => sum + c.consumo, 0);
 
     const historial = todosGastos
         .filter(g => g.tipo === gasto.tipo)
         .sort((a, b) => a.mes.localeCompare(b.mes))
-        .slice(-6);
+        .slice(-6)
+        .map(h => {
+            if (isSpecificLocal) {
+                const costoLocal = h.costosPorLocal.find(c => {
+                    const id = typeof c.localId === 'string' ? c.localId : c.localId._id;
+                    return id === filtroLocal;
+                });
+                return { mes: h.mes, monto: costoLocal ? costoLocal.monto : 0, consumo: costoLocal ? costoLocal.consumo : 0 };
+            }
+            return { mes: h.mes, monto: h.montoTotal, consumo: h.consumoTotal };
+        });
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
@@ -187,7 +203,9 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
     // --- CARD HEADER ---
     ctx.font = `bold 32px ${fontBase}`;
     ctx.fillStyle = colors.textMain;
-    ctx.fillText(`Reporte de ${isLuz ? 'Electricidad' : 'Agua'}`, cardLeft, y);
+    const localName = isSpecificLocal ? (typeof localesACobrar[0].localId === 'string' ? locales.find(l => l._id === localesACobrar[0].localId)?.nombre : (localesACobrar[0].localId as any).nombre) : '';
+    const titleText = isSpecificLocal ? `Reporte de ${isLuz ? 'Electricidad' : 'Agua'} - ${localName}` : `Reporte de ${isLuz ? 'Electricidad' : 'Agua'}`;
+    ctx.fillText(titleText, cardLeft, y);
     
     ctx.font = `600 16px ${fontBase}`;
     ctx.fillStyle = colors.primary;
@@ -223,7 +241,7 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
     ctx.fillText('Consumo Total', cardLeft, y);
     ctx.font = `bold 24px ${fontBase}`;
     ctx.fillStyle = colors.textMain;
-    ctx.fillText(`${gasto.consumoTotal.toFixed(1)} ${unit}`, cardLeft, y + 30);
+    ctx.fillText(`${totalConsumo.toFixed(1)} ${unit}`, cardLeft, y + 30);
 
     // Metric 2: Tarifa
     ctx.font = `500 13px ${fontBase}`;
@@ -239,7 +257,7 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
     ctx.fillText('TOTAL A COBRAR', cardLeft + metricWidth * 2, y);
     ctx.font = `900 28px ${fontBase}`;
     ctx.fillStyle = colors.primary;
-    ctx.fillText(`S/ ${gasto.montoTotal.toFixed(2)}`, cardLeft + metricWidth * 2, y + 30);
+    ctx.fillText(`S/ ${totalACobrar.toFixed(2)}`, cardLeft + metricWidth * 2, y + 30);
 
     y += 80;
 
@@ -332,7 +350,7 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
 
         const chartW = innerWidth;
         const chartH = 180;
-        const maxH = Math.max(...historial.map(h => h.montoTotal)) * 1.2 || 100;
+        const maxH = Math.max(...historial.map(h => h.monto)) * 1.2 || 100;
 
         // Grid lines
         ctx.strokeStyle = colors.border;
@@ -355,8 +373,17 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
 
         historial.forEach((h, i) => {
             const bx = cardLeft + gap + (i * (barW + gap));
-            const bh = (h.montoTotal / maxH) * chartH;
+            const bh = (h.monto / maxH) * chartH;
             const by = y + chartH - bh;
+
+            // Consumo label above the bar
+            if (h.consumo > 0) {
+                const consStr = `${h.consumo.toFixed(1)} ${unit}`;
+                ctx.font = `600 11px ${fontBase}`;
+                ctx.fillStyle = colors.textMain;
+                const csw = ctx.measureText(consStr).width;
+                ctx.fillText(consStr, bx + (barW / 2) - (csw / 2), by - 8);
+            }
 
             // Bar
             ctx.fillStyle = colors.primaryLight;
@@ -387,17 +414,37 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
     const fw = ctx.measureText(footerText).width;
     ctx.fillText(footerText, (canvasWidth / 2) - (fw / 2), y);
 
-    // Descargar imagen
-    canvas.toBlob((blob) => {
-        if (blob) {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `Reporte_${gasto.tipo}_${gasto.mes}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+    // Descargar imagen o compartir (iOS/Móviles)
+    canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        
+        const fileName = `Reporte_${gasto.tipo}_${gasto.mes}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        // Solo usar el menú de compartir nativo en dispositivos móviles
+        const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: fileName,
+                });
+                return; // Si tuvo éxito compartiendo/guardando, terminamos.
+            } catch (err) {
+                console.log("Share cancelled or failed", err);
+                // Si falla, caemos al método clásico por si acaso
+            }
         }
+        
+        // Fallback clásico para PC o navegadores sin soporte (descarga directa)
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }, 'image/png');
 };

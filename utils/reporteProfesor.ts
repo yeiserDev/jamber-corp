@@ -430,17 +430,37 @@ export const generarReporteProfesor = async (gasto: Gasto, todosGastos: Gasto[],
     ctx.fillText(`Generado el ${fecha} • Reporte exclusivo para el local Profesor`, cardWidth / 2, yPos + 35);
     ctx.textAlign = 'left';
 
-    // ======== DESCARGAR IMAGEN ========
-    canvas.toBlob((blob) => {
-        if (blob) {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `Reporte_Profesor_${gasto.tipo}_${gasto.mes}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+    // ======== DESCARGAR IMAGEN O COMPARTIR (iOS/Móviles) ========
+    canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        
+        const fileName = `Reporte_Profesor_${gasto.tipo}_${gasto.mes}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        // Solo usar el menú de compartir nativo en dispositivos móviles
+        const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: fileName,
+                });
+                return; // Si tuvo éxito compartiendo/guardando, terminamos.
+            } catch (err) {
+                console.log("Share cancelled or failed", err);
+                // Si falla, caemos al método clásico por si acaso
+            }
         }
+        
+        // Fallback clásico para PC o navegadores sin soporte (descarga directa)
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }, 'image/png');
 };
