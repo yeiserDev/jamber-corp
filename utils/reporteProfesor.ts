@@ -446,11 +446,10 @@ export const generarReporteProfesor = async (gasto: Gasto, todosGastos: Gasto[],
                     files: [file],
                     title: fileName,
                 });
-                return; // Si tuvo éxito compartiendo/guardando, terminamos.
             } catch (err) {
                 console.log("Share cancelled or failed", err);
-                // Si falla, caemos al método clásico por si acaso
             }
+            return; // Terminar aquí siempre si usamos native share, incluso si el usuario cancela.
         }
         
         // Fallback clásico para PC o navegadores sin soporte (descarga directa)
