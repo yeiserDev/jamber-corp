@@ -187,6 +187,28 @@
 .animate-fade-in  { animation: fade-in  0.35s ease-out both; }
 .animate-scale-in { animation: scale-in 0.3s  cubic-bezier(0.16, 1, 0.3, 1) both; }
 
+/* ── Impresión del recibo explicado ───────────────────────── */
+@media print {
+  body * { visibility: hidden; }
+  .recibo-imprimible, .recibo-imprimible * { visibility: visible; }
+  .recibo-imprimible {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  .recibo-imprimible .recibo-scroll {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  .no-imprimir { display: none !important; }
+}
+
 .delay-0   { animation-delay:   0ms; }
 .delay-50  { animation-delay:  50ms; }
 .delay-100 { animation-delay: 100ms; }

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Droplets, Pencil, Trash2, Download, FileText, BarChart } from "lucide-react";
+import { Zap, Droplets, Pencil, Trash2, Download, FileText, BarChart, HelpCircle, Receipt } from "lucide-react";
 import { Gasto, Local } from "@/types/gasto";
 import { generarReporteImagen } from "@/utils/reportGenerator";
+import ModalComoSeCalcula from "./ModalComoSeCalcula";
+import ReciboDigital from "./ReciboDigital";
 
 interface GastoCardProps {
   gasto: Gasto;
@@ -66,6 +68,23 @@ export default function GastoCard({
       });
     }
   }
+
+  /* ── Panadería: panel explicativo del prorrateo/amortiguación ── */
+  const [modalCalculoAbierto, setModalCalculoAbierto] = useState(false);
+  const [reciboAbierto, setReciboAbierto] = useState(false);
+
+  const costoPanaderia = localesAmostrar.find(c => {
+    const local = typeof c.localId === "string"
+      ? locales.find(l => l._id === c.localId)
+      : c.localId;
+    return local?.tipo === "panaderia" || local?.nombre.toLowerCase().includes("panad");
+  });
+  const localPanaderia = costoPanaderia
+    ? (typeof costoPanaderia.localId === "string"
+        ? locales.find(l => l._id === costoPanaderia.localId)
+        : costoPanaderia.localId)
+    : undefined;
+  const mostrarExplicacion = isLuz && !!costoPanaderia;
 
   const themeColor = isLuz ? "text-amber-500" : "text-sky-500";
   const themeBg    = isLuz ? "bg-amber-50" : "bg-sky-50";
@@ -263,6 +282,25 @@ export default function GastoCard({
            </div>
         </div>
 
+        {mostrarExplicacion && (
+          <div className="flex flex-col sm:flex-row gap-2 mb-2">
+            <button
+              onClick={e => { e.stopPropagation(); setReciboAbierto(true); }}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-[13px] font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-[12px] transition-all shadow-[0_2px_10px_rgba(245,158,11,0.3)]"
+            >
+              <Receipt className="w-4 h-4" />
+              Ver recibo explicado
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); setModalCalculoAbierto(true); }}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-[13px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 rounded-[12px] transition-all"
+            >
+              <HelpCircle className="w-4 h-4" />
+              ¿Cómo se calcula?
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={e => { e.stopPropagation(); generarReporteImagen(gasto, todosGastos, locales, filtroLocal); }}
@@ -294,6 +332,32 @@ export default function GastoCard({
           )}
         </div>
       </div>
+
+      {mostrarExplicacion && costoPanaderia && (
+        <ModalComoSeCalcula
+          open={modalCalculoAbierto}
+          onClose={() => setModalCalculoAbierto(false)}
+          nombreLocal={localPanaderia?.nombre || "Panadería"}
+          mes={gasto.mes}
+          montoRecibo={gasto.montoTotal}
+          consumoTotalPropiedad={gasto.consumoTotal}
+          montoLocal={costoPanaderia.monto}
+          consumoLocal={costoPanaderia.consumo}
+        />
+      )}
+
+      {mostrarExplicacion && costoPanaderia && (
+        <ReciboDigital
+          open={reciboAbierto}
+          onClose={() => setReciboAbierto(false)}
+          nombreLocal={localPanaderia?.nombre || "Panadería"}
+          mes={gasto.mes}
+          montoRecibo={gasto.montoTotal}
+          consumoTotalPropiedad={gasto.consumoTotal}
+          montoLocal={costoPanaderia.monto}
+          consumoLocal={costoPanaderia.consumo}
+        />
+      )}
     </div>
   );
 }

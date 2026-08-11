@@ -13,7 +13,10 @@
       "Bash(rm -rf \"c:/Users/yeise/Downloads/Jamber-Corp/jamber-corp/app/api/transportes\")",
       "Bash(rm -f \"c:/Users/yeise/Downloads/Jamber-Corp/jamber-corp/lib/models/TransporteGasto.ts\")",
       "Bash(rm -f \"c:/Users/yeise/Downloads/Jamber-Corp/jamber-corp/types/transporte.ts\")",
-      "Bash(vercel --version)"
+      "Bash(vercel --version)",
+      "Bash(findstr /V node_modules)",
+      "PowerShell(node -e \"const p=require\\('./package.json'\\);console.log\\(JSON.stringify\\({d:p.dependencies,dev:p.devDependencies},null,1\\)\\)\")",
+      "PowerShell(npx tsc --noEmit -p tsconfig.json)"
     ],
     "deny": [],
     "ask": []
