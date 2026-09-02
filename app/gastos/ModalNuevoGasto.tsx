@@ -487,7 +487,7 @@ const ModalNuevoGasto = React.memo(
                               </label>
                               <input
                                 type="number"
-                                step="0.01"
+                                step={tipo === "agua" ? "0.001" : "0.01"}
                                 min="0"
                                 value={lectura.lecturaAnterior}
                                 onChange={(e) =>
@@ -515,7 +515,7 @@ const ModalNuevoGasto = React.memo(
                               </label>
                               <input
                                 type="number"
-                                step="0.01"
+                                step={tipo === "agua" ? "0.001" : "0.01"}
                                 min="0"
                                 value={lectura.lecturaActual}
                                 onChange={(e) =>

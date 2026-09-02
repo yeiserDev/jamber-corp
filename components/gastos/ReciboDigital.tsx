@@ -4,88 +4,159 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Printer } from "lucide-react";
 
-/* ─────────────────────────────────────────────────────────────
-   Serie verificada contra los recibos físicos de Luz del Sur
-   (suministro 1674130) y las fotos del medidor de la panadería.
+/*
+   Serie verificada contra los recibos fisicos de Luz del Sur
+   (suministro 1674130) y las fotos del medidor de la panaderia.
 
    medidorApp*  = lecturas registradas en el sistema
-   medidorReal* = lo que marcaba el medidor físico ese día
+   medidorReal* = lo que marcaba el medidor fisico ese dia
 
-   Sólo hay lectura física en la fecha exacta de corte desde mayo
-   2026; antes las fotos se tomaban a fin de mes. Por eso marzo y
-   abril no tienen medidorReal y el bloque de reconciliación se
-   oculta en esos meses.
-   ───────────────────────────────────────────────────────────── */
+   Solo hay lectura fisica en la fecha exacta de corte desde el recibo
+   de mayo; antes las fotos se tomaban a fin de mes. Por eso los dos
+   primeros meses no tienen medidorReal y el bloque de reconciliacion
+   se oculta ahi.
+*/
+
+/** Conceptos del recibo de Luz del Sur, tal como vienen impresos */
+export interface DesgloseRecibo {
+  precioBase: number;
+  energia: number;
+  cargoFijo: number;
+  mantenimiento: number;
+  alumbrado: number;
+  interes: number;
+  igv: number;
+  electrificacion: number;
+  ajustes: number;
+  /** Recargo ya incorporado en la tarifa; se informa, pero no se vuelve a sumar. */
+  foseIncluido?: number;
+}
 
 export interface MesPanaderia {
-  /** Clave igual a Gasto.mes, formato "2026-07" */
+  /**
+   * Clave igual a Gasto.mes, formato "2026-07".
+   *
+   * Es solo una pista: si el gasto se archiva en otro mes, el recibo se
+   * localiza igual por el importe total, que no cambia de sitio.
+   */
   mes: string;
+  /** Mes facturado segun el recibo, que es lo que ella ve en su papel */
   etiqueta: string;
+  /** Mes en que se le cobra, como lo registra el sistema */
+  mesCobro: string;
   periodo: string;
   fechaAnterior: string;
   fechaActual: string;
-  medidorAppAnterior: number;
-  medidorAppActual: number;
+  medidorAppAnterior?: number;
+  medidorAppActual?: number;
   medidorRealAnterior?: number;
   medidorRealActual?: number;
+  desglose: DesgloseRecibo;
 }
 
 export const SERIE_PANADERIA: MesPanaderia[] = [
   {
     mes: "2026-03",
     etiqueta: "Marzo 2026",
-    periodo: "16 feb → 18 mar 2026",
+    mesCobro: "abril",
+    periodo: "16 feb al 18 mar 2026",
     fechaAnterior: "16 de febrero",
     fechaActual: "18 de marzo",
     medidorAppAnterior: 10788.85,
     medidorAppActual: 11036.05,
+    desglose: {
+      precioBase: 0.5814, energia: 188.20, cargoFijo: 2.16, mantenimiento: 1.35,
+      alumbrado: 14.60, interes: 0.33, igv: 37.20, electrificacion: 3.56, ajustes: 0,
+    },
   },
   {
     mes: "2026-04",
     etiqueta: "Abril 2026",
-    periodo: "18 mar → 16 abr 2026",
+    mesCobro: "mayo",
+    periodo: "18 mar al 16 abr 2026",
     fechaAnterior: "18 de marzo",
     fechaActual: "16 de abril",
     medidorAppAnterior: 11036.05,
     medidorAppActual: 11496.35,
+    desglose: {
+      precioBase: 0.5836, energia: 408.29, cargoFijo: 2.20, mantenimiento: 1.37,
+      alumbrado: 29.19, interes: 0.36, igv: 79.45, electrificacion: 7.70, ajustes: 0.04,
+    },
   },
   {
     mes: "2026-05",
     etiqueta: "Mayo 2026",
-    periodo: "16 abr → 15 may 2026",
+    mesCobro: "junio",
+    periodo: "16 abr al 15 may 2026",
     fechaAnterior: "16 de abril",
     fechaActual: "15 de mayo",
     medidorAppAnterior: 11496.35,
     medidorAppActual: 11950.83,
     medidorRealActual: 12184.96,
+    desglose: {
+      precioBase: 0.5991, energia: 374.26, cargoFijo: 2.26, mantenimiento: 1.41,
+      alumbrado: 29.19, interes: 0.64, igv: 73.40, electrificacion: 6.87, ajustes: -0.03,
+    },
   },
   {
     mes: "2026-06",
     etiqueta: "Junio 2026",
-    periodo: "15 may → 15 jun 2026",
+    mesCobro: "julio",
+    periodo: "15 may al 15 jun 2026",
     fechaAnterior: "15 de mayo",
     fechaActual: "15 de junio",
     medidorAppAnterior: 11950.83,
     medidorAppActual: 12418.83,
     medidorRealAnterior: 12184.96,
     medidorRealActual: 12695.95,
+    desglose: {
+      precioBase: 0.6134, energia: 409.26, cargoFijo: 2.27, mantenimiento: 1.42,
+      alumbrado: 33.04, interes: 0.95, igv: 80.46, electrificacion: 7.34, ajustes: -0.04,
+    },
   },
   {
     mes: "2026-07",
     etiqueta: "Julio 2026",
-    periodo: "15 jun → 16 jul 2026",
+    mesCobro: "agosto",
+    periodo: "15 jun al 16 jul 2026",
     fechaAnterior: "15 de junio",
     fechaActual: "16 de julio",
     medidorAppAnterior: 12418.83,
     medidorAppActual: 12903.83,
     medidorRealAnterior: 12695.95,
     medidorRealActual: 13213.64,
+    desglose: {
+      precioBase: 0.6129, energia: 414.20, cargoFijo: 2.26, mantenimiento: 1.41,
+      alumbrado: 35.20, interes: 1.19, igv: 81.77, electrificacion: 7.43, ajustes: 0.14,
+    },
+  },
+  {
+    mes: "2026-08",
+    etiqueta: "Agosto 2026",
+    mesCobro: "setiembre",
+    periodo: "16 jul al 17 ago 2026",
+    fechaAnterior: "16 de julio",
+    fechaActual: "17 de agosto",
+    desglose: {
+      precioBase: 0.6234, energia: 440.62, cargoFijo: 2.24, mantenimiento: 1.40,
+      alumbrado: 35.20, interes: 0.94, igv: 86.47, electrificacion: 7.77,
+      ajustes: 0.06, foseIncluido: 10.21,
+    },
   },
 ];
 
 export const SUMINISTRO = "1674130";
 
-/* ── Pantalla del medidor ────────────────────────────────────── */
+/** Suma de los conceptos, que debe dar el total a pagar del recibo */
+export function totalRecibo(m: MesPanaderia): number {
+  const d = m.desglose;
+  return (
+    d.energia + d.cargoFijo + d.mantenimiento + d.alumbrado +
+    d.interes + d.igv + d.electrificacion + d.ajustes
+  );
+}
+
+/* Pantalla del medidor */
 function Lcd({ valor, fecha }: { valor: number; fecha: string }) {
   return (
     <div className="flex-1 min-w-0">
@@ -101,7 +172,7 @@ function Lcd({ valor, fecha }: { valor: number; fecha: string }) {
   );
 }
 
-/* ── Fila con guías punteadas, como el desglose del recibo ───── */
+/* Fila con guias punteadas, como el desglose del recibo */
 function Fila({
   concepto,
   valor,
@@ -134,7 +205,7 @@ function Fila({
   );
 }
 
-/* ── Título de sección ───────────────────────────────────────── */
+/* Titulo de seccion */
 function Rotulo({ children }: { children: React.ReactNode }) {
   return (
     <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-neutral-400 mb-3">
@@ -147,7 +218,7 @@ interface ReciboDigitalProps {
   open: boolean;
   onClose: () => void;
   nombreLocal: string;
-  /** Gasto.mes, formato "2026-07" */
+  /** Gasto.mes, formato "2026-08" */
   mes: string;
   montoRecibo: number;
   consumoTotalPropiedad: number;
@@ -181,7 +252,19 @@ export default function ReciboDigital({
 
   if (!open) return null;
 
-  const idx = serie.findIndex(m => m.mes === mes);
+  /* Tolera "2026-8" y espacios sobrantes ademas del formato "2026-08" */
+  const clave = (() => {
+    const t = (mes ?? "").trim();
+    const m = t.match(/^(\d{4})-(\d{1,2})$/);
+    return m ? `${m[1]}-${m[2].padStart(2, "0")}` : t;
+  })();
+
+  /* Primero por mes; si el gasto se archivo en otro mes, por el importe del
+     recibo, que identifica a cada uno sin ambiguedad. */
+  let idx = serie.findIndex(m => m.mes === clave);
+  if (idx < 0 && montoRecibo > 0) {
+    idx = serie.findIndex(m => Math.abs(totalRecibo(m) - montoRecibo) < 0.02);
+  }
   const datos = idx >= 0 ? serie[idx] : undefined;
   const anterior = idx > 0 ? serie[idx - 1] : undefined;
 
@@ -196,14 +279,51 @@ export default function ReciboDigital({
   const noCobrado = restaDeElla - consumoLocal;
 
   const saldo =
-    datos?.medidorRealActual != null
+    datos?.medidorRealActual != null && datos?.medidorAppActual != null
       ? datos.medidorRealActual - datos.medidorAppActual
       : 0;
   const saldoSoles = saldo * tarifaReal;
 
   const kwhAnterior = anterior
+    && anterior.medidorAppActual != null
+    && anterior.medidorAppAnterior != null
     ? anterior.medidorAppActual - anterior.medidorAppAnterior
     : 0;
+
+  /*
+     Las dos cuentas.
+     Su manera: solo energia + IGV, sobre la resta cruda del medidor.
+     La nuestra: cada concepto del recibo repartido segun su parte, que es
+     identico a multiplicar por la tarifa efectiva.
+
+     La parte se toma sobre soles, no sobre kWh: como la tarifa efectiva es la
+     misma para todos, el resultado es el mismo, pero asi las filas del
+     desglose suman exactamente su monto y ella lo puede comprobar con
+     calculadora.
+  */
+  const d = datos?.desglose;
+  const parte = montoRecibo > 0 ? montoLocal / montoRecibo : 0;
+
+  const suEnergia = d ? restaDeElla * d.precioBase : 0;
+  const suIgv = suEnergia * 0.18;
+  const suTotal = suEnergia + suIgv;
+
+  const nuestro = d
+    ? {
+        energia: d.energia * parte,
+        alumbrado: d.alumbrado * parte,
+        fijos: (d.cargoFijo + d.mantenimiento + d.interes) * parte,
+        igv: d.igv * parte,
+        electrificacion: d.electrificacion * parte,
+        ajustes: d.ajustes * parte,
+      }
+    : null;
+
+  /* Todo anclado en los kWh que ella conto, para que la resta cierre exacta:
+     leFaltaba - amortiguado = montoLocal - suTotal */
+  const suTotalCompleto = restaDeElla * tarifaReal;
+  const leFaltaba = suTotalCompleto - suTotal;
+  const amortiguado = suTotalCompleto - montoLocal;
 
   return createPortal(
     <div
@@ -217,15 +337,20 @@ export default function ReciboDigital({
         onClick={e => e.stopPropagation()}
         className="recibo-imprimible bg-[#fbfaf7] w-full max-w-xl max-h-[94vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-scale-in"
       >
-        {/* ── CABECERA ── */}
+        {/* CABECERA */}
         <div className="flex-shrink-0 bg-neutral-900 px-5 sm:px-7 py-4 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-neutral-400">
               Su consumo de luz
             </p>
             <h3 className="text-[19px] sm:text-[21px] font-black text-white tracking-tight leading-tight mt-0.5">
-              {nombreLocal} · {datos?.etiqueta ?? mes}
+              {nombreLocal} &middot; {datos?.etiqueta ?? mes}
             </h3>
+            {datos && (
+              <p className="text-[12.5px] text-neutral-300 mt-0.5">
+                Se cobra en {datos.mesCobro}
+              </p>
+            )}
             <p className="font-mono text-[12px] text-neutral-400 mt-0.5">
               {datos?.periodo ?? ""}
             </p>
@@ -240,7 +365,20 @@ export default function ReciboDigital({
         </div>
 
         <div className="recibo-scroll flex-1 overflow-y-auto">
-          {/* ── SU MEDIDOR ── */}
+          {/* Sin lecturas cargadas para este mes: dilo, no lo escondas */}
+          {!datos && (
+            <div className="mx-5 sm:mx-7 mt-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <p className="text-[14px] leading-relaxed text-neutral-700">
+                Faltan las lecturas del medidor de{" "}
+                <span className="font-mono font-semibold">{clave}</span> en{" "}
+                <span className="font-semibold">SERIE_PANADERIA</span>. Se muestra
+                solo el calculo del monto; para ver la comparacion con su medidor,
+                agrega ese mes.
+              </p>
+            </div>
+          )}
+
+          {/* SU MEDIDOR */}
           {puedeReconciliar && (
             <section className="px-5 sm:px-7 pt-6 pb-6 border-b-2 border-dashed border-neutral-200">
               <Rotulo>Lo que marcó su medidor</Rotulo>
@@ -250,14 +388,15 @@ export default function ReciboDigital({
                   valor={datos!.medidorRealAnterior!}
                   fecha={datos!.fechaAnterior}
                 />
-                <div className="pt-5 text-[20px] font-bold text-neutral-300">→</div>
+                <div className="pt-5 text-[20px] font-bold text-neutral-300">
+                  &rarr;
+                </div>
                 <Lcd
                   valor={datos!.medidorRealActual!}
                   fecha={datos!.fechaActual}
                 />
               </div>
 
-              {/* Franja resaltada: su resta */}
               <div className="mt-5 bg-[#ffe94a] px-4 py-3 flex items-baseline justify-between gap-3">
                 <span className="text-[15px] font-bold text-neutral-900">
                   Su resta da
@@ -291,14 +430,163 @@ export default function ReciboDigital({
             </section>
           )}
 
-          {/* ── SU MONTO ── */}
+          {/* LAS DOS CUENTAS */}
+          {puedeReconciliar && nuestro && d && (
+            <section className="px-5 sm:px-7 py-6 border-b-2 border-dashed border-neutral-200">
+              <Rotulo>Su cuenta y la nuestra</Rotulo>
+
+              <div className="rounded-lg border border-neutral-300 bg-white p-4">
+                <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-neutral-500 mb-3">
+                  Como la sacó usted
+                </p>
+                <div className="space-y-2">
+                  <Fila
+                    concepto={`${restaDeElla.toFixed(2)} kWh x S/ ${d.precioBase.toFixed(4)}`}
+                    valor={`S/ ${suEnergia.toFixed(2)}`}
+                  />
+                  <Fila concepto="IGV 18%" valor={`S/ ${suIgv.toFixed(2)}`} />
+                  <div className="border-t border-neutral-300 pt-2">
+                    <Fila
+                      concepto="Le salió"
+                      valor={`S/ ${suTotal.toFixed(2)}`}
+                      fuerte
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border-2 border-neutral-900 bg-white p-4 mt-3">
+                <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-neutral-900 mb-1">
+                  Como la sacamos nosotros
+                </p>
+                <p className="text-[13px] text-neutral-500 mb-3">
+                  Su parte del recibo: {(parte * 100).toFixed(1)}%
+                </p>
+                <div className="space-y-2">
+                  <Fila concepto="Energía" valor={`S/ ${nuestro.energia.toFixed(2)}`} />
+                  <Fila concepto="Alumbrado público" valor={`S/ ${nuestro.alumbrado.toFixed(2)}`} />
+                  <Fila concepto="Cargo fijo, mant. e interés" valor={`S/ ${nuestro.fijos.toFixed(2)}`} />
+                  <Fila concepto="IGV" valor={`S/ ${nuestro.igv.toFixed(2)}`} />
+                  <Fila concepto="Electrificación rural" valor={`S/ ${nuestro.electrificacion.toFixed(2)}`} />
+                  {Math.abs(nuestro.ajustes) >= 0.005 && (
+                    <Fila concepto="Ajustes del recibo" valor={`S/ ${nuestro.ajustes.toFixed(2)}`} />
+                  )}
+                  <div className="border-t border-neutral-300 pt-2">
+                    <Fila
+                      concepto="Le cobramos"
+                      valor={`S/ ${montoLocal.toFixed(2)}`}
+                      fuerte
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 bg-[#ffe94a] px-4 py-3 flex items-baseline justify-between gap-3">
+                <span className="text-[15px] font-bold text-neutral-900">
+                  Diferencia
+                </span>
+                <span className="font-mono text-[19px] font-black text-neutral-900 tabular-nums">
+                  S/ {Math.abs(montoLocal - suTotal).toFixed(2)}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <Fila
+                  concepto="Cargos que su cuenta no sumó"
+                  valor={`+ S/ ${leFaltaba.toFixed(2)}`}
+                />
+                <Fila
+                  concepto={`kWh que no le cobramos (${noCobrado.toFixed(2)} kWh)`}
+                  valor={`- S/ ${amortiguado.toFixed(2)}`}
+                />
+                <div className="border-t border-neutral-300 pt-2">
+                  <Fila
+                    concepto="Diferencia"
+                    valor={`S/ ${(leFaltaba - amortiguado).toFixed(2)}`}
+                    fuerte
+                  />
+                </div>
+              </div>
+
+              <p className="text-[14.5px] leading-relaxed text-neutral-600 mt-4">
+                Su cuenta suma energía e IGV. Luz del Sur además cobra alumbrado
+                público, cargo fijo, mantenimiento, interés y electrificación rural.
+                A cambio, nosotros no le cobramos todos los kWh que marcó su
+                medidor. Lo uno casi compensa lo otro.
+              </p>
+            </section>
+          )}
+
+          {/* DESGLOSE DEL RECIBO CUANDO LAS LECTURAS SE INGRESAN MANUALMENTE */}
+          {!puedeReconciliar && nuestro && d && (
+            <section className="px-5 sm:px-7 py-6 border-b-2 border-dashed border-neutral-200">
+              <Rotulo>Qué incluye su cuota</Rotulo>
+
+              <p className="text-[14.5px] leading-relaxed text-neutral-600 mb-4">
+                Panadería consumió {consumoLocal.toFixed(2)} kWh y representa el{" "}
+                <span className="font-bold text-neutral-900">
+                  {(parte * 100).toFixed(1)}%
+                </span>{" "}
+                del recibo. Ese mismo porcentaje se aplica a todos los conceptos
+                cobrados por Luz del Sur.
+              </p>
+
+              <div className="rounded-lg border-2 border-neutral-900 bg-white p-4">
+                <div className="space-y-2">
+                  <Fila
+                    concepto={`Energía (recibo S/ ${d.energia.toFixed(2)})`}
+                    valor={`S/ ${nuestro.energia.toFixed(2)}`}
+                  />
+                  <Fila
+                    concepto={`Alumbrado público (S/ ${d.alumbrado.toFixed(2)})`}
+                    valor={`S/ ${nuestro.alumbrado.toFixed(2)}`}
+                  />
+                  <Fila
+                    concepto={`Cargo fijo, mant. e interés (S/ ${(d.cargoFijo + d.mantenimiento + d.interes).toFixed(2)})`}
+                    valor={`S/ ${nuestro.fijos.toFixed(2)}`}
+                  />
+                  <Fila
+                    concepto={`IGV (recibo S/ ${d.igv.toFixed(2)})`}
+                    valor={`S/ ${nuestro.igv.toFixed(2)}`}
+                  />
+                  <Fila
+                    concepto={`Electrificación rural (S/ ${d.electrificacion.toFixed(2)})`}
+                    valor={`S/ ${nuestro.electrificacion.toFixed(2)}`}
+                  />
+                  {Math.abs(d.ajustes) >= 0.005 && (
+                    <Fila
+                      concepto={`Redondeos (recibo S/ ${d.ajustes.toFixed(2)})`}
+                      valor={`S/ ${nuestro.ajustes.toFixed(2)}`}
+                    />
+                  )}
+                  <div className="border-t border-neutral-300 pt-2">
+                    <Fila
+                      concepto="Total Panadería"
+                      valor={`S/ ${montoLocal.toFixed(2)}`}
+                      fuerte
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {d.foseIncluido != null && (
+                <p className="mt-4 rounded-lg bg-amber-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-amber-950">
+                  El recibo informa un recargo FOSE de S/ {d.foseIncluido.toFixed(2)}.
+                  Ya está incorporado en la tarifa de energía, por eso se muestra
+                  como referencia y no se suma una segunda vez.
+                </p>
+              )}
+            </section>
+          )}
+
+          {/* SU MONTO */}
           <section className="px-5 sm:px-7 py-6 border-b-2 border-dashed border-neutral-200">
             <Rotulo>Su monto de este mes</Rotulo>
 
             <div className="bg-[#ffe94a] px-4 py-4">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 font-mono text-[16px] sm:text-[17px] font-bold text-neutral-900 tabular-nums">
                 <span>{consumoLocal.toFixed(2)} kWh</span>
-                <span className="text-neutral-500">×</span>
+                <span className="text-neutral-500">x</span>
                 <span>S/ {tarifaReal.toFixed(4)}</span>
                 <span className="text-neutral-500">=</span>
                 <span className="text-[23px] font-black">
@@ -327,13 +615,13 @@ export default function ReciboDigital({
             </div>
 
             <p className="text-[14px] leading-relaxed text-neutral-600 mt-4">
-              No es el precio que sale impreso en el recibo: ese no incluye IGV,
-              alumbrado público ni mantenimiento. Este precio es el mismo para todos
-              los locales.
+              No es solo el precio base impreso en el recibo. El precio real incluye
+              energía, IGV, alumbrado público, cargo fijo, mantenimiento, interés,
+              electrificación rural y ajustes. Se aplica por igual a todos los locales.
             </p>
           </section>
 
-          {/* ── SALDO ── */}
+          {/* SALDO */}
           {saldo > 0 && (
             <section className="px-5 sm:px-7 py-6 border-b-2 border-dashed border-neutral-200">
               <Rotulo>Guardado en su medidor</Rotulo>
@@ -345,7 +633,7 @@ export default function ReciboDigital({
                 />
                 <Fila
                   concepto="El sistema le cobró hasta"
-                  valor={datos!.medidorAppActual.toFixed(2)}
+                  valor={datos!.medidorAppActual!.toFixed(2)}
                 />
               </div>
 
@@ -369,7 +657,7 @@ export default function ReciboDigital({
             </section>
           )}
 
-          {/* ── COMPARACIÓN ── */}
+          {/* COMPARACION */}
           {anterior && kwhAnterior > 0 && (
             <section className="px-5 sm:px-7 py-6 border-b-2 border-dashed border-neutral-200">
               <Rotulo>Comparado con {anterior.etiqueta}</Rotulo>
@@ -391,10 +679,10 @@ export default function ReciboDigital({
             </section>
           )}
 
-          {/* ── PIE ── */}
+          {/* PIE */}
           <section className="px-5 sm:px-7 py-5">
             <p className="text-[12.5px] leading-relaxed text-neutral-500">
-              Calculado con el recibo de Luz del Sur del suministro N°{" "}
+              Calculado con el recibo de Luz del Sur del suministro N&deg;{" "}
               <span className="font-mono font-semibold text-neutral-700">
                 {SUMINISTRO}
               </span>
@@ -404,14 +692,14 @@ export default function ReciboDigital({
           </section>
         </div>
 
-        {/* ── ACCIONES ── */}
+        {/* ACCIONES */}
         <div className="no-imprimir flex-shrink-0 px-5 sm:px-7 py-4 bg-white border-t border-neutral-200 flex gap-2.5">
           <button
             onClick={() => window.print()}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-neutral-300 hover:bg-neutral-50 text-neutral-700 text-[15px] font-semibold transition-colors"
           >
             <Printer className="w-4 h-4" />
-            Imprimir
+            Imprimir o guardar PDF
           </button>
           <button
             onClick={onClose}
