@@ -9,6 +9,15 @@ import toast, { Toaster } from "react-hot-toast";
 import { Gasto, Local } from "@/types/gasto";
 
 type TipoFiltro = "todos" | "luz" | "agua";
+type ValorLectura = number | "";
+type LecturaFormulario = {
+  localId: string;
+  medidorNumero?: number;
+  lecturaAnterior: ValorLectura;
+  lecturaActual: ValorLectura;
+};
+
+const PERIODO_PANADERIA_MANUAL = "2026-08";
 
 /* ── Helpers ─────────────────────────────────────────────── */
 const fmesLargo = (m: string) =>
@@ -85,7 +94,7 @@ export default function GastosPage() {
   const [cargoFijo,    setCargoFijo]    = useState("");
   const [igv,          setIgv]          = useState("");
   const [otrosCargos,  setOtrosCargos]  = useState("");
-  const [lecturas,     setLecturas]     = useState<{ localId: string; medidorNumero?: number; lecturaAnterior: number; lecturaActual: number; }[]>([]);
+  const [lecturas,     setLecturas]     = useState<LecturaFormulario[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuth, setIsAuth] = useState(false);
   const [pasoModal,    setPasoModal]    = useState(1);
@@ -121,7 +130,7 @@ export default function GastosPage() {
       if (lData.success) {
         setLocales(lData.locales);
         const conMedidor = lData.locales.filter((l: Local) => l.tipo !== "casa");
-        setLecturas(conMedidor.map((l: Local) => ({ localId: l._id, medidorNumero: 1, lecturaAnterior: 0, lecturaActual: 0 })));
+        setLecturas(conMedidor.map((l: Local) => ({ localId: l._id, medidorNumero: 1, lecturaAnterior: "", lecturaActual: "" })));
       }
     } catch {
       setGastos([]);
@@ -145,6 +154,27 @@ export default function GastosPage() {
     if (!mes || !consumoTotal || !montoTotal || lecturas.length === 0) {
       toast.error("Completa todos los campos obligatorios"); return;
     }
+    const lecturaIncompleta = lecturas.find(
+      l => l.lecturaAnterior === "" || l.lecturaActual === ""
+    );
+    if (lecturaIncompleta) {
+      const local = locales.find(l => l._id === lecturaIncompleta.localId);
+      toast.error(`Completa ambas lecturas de ${local?.nombre || "todos los medidores"}`);
+      return;
+    }
+    const lecturaInvalida = lecturas.find(
+      l => Number(l.lecturaActual) < Number(l.lecturaAnterior)
+    );
+    if (lecturaInvalida) {
+      const local = locales.find(l => l._id === lecturaInvalida.localId);
+      toast.error(`La lectura actual de ${local?.nombre || "un medidor"} no puede ser menor que la anterior`);
+      return;
+    }
+    const lecturasNormalizadas = lecturas.map(l => ({
+      ...l,
+      lecturaAnterior: Number(l.lecturaAnterior),
+      lecturaActual: Number(l.lecturaActual),
+    }));
     const t = toast.loading(gastoEditando ? "Actualizando..." : "Registrando...");
     try {
       const url    = gastoEditando ? `/api/gastos/${gastoEditando}` : "/api/gastos";
@@ -152,7 +182,7 @@ export default function GastosPage() {
       const res    = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mes, tipo, consumoTotal: parseFloat(consumoTotal), montoTotal: parseFloat(montoTotal), cargoFijo: cargoFijo ? parseFloat(cargoFijo) : 0, igv: igv ? parseFloat(igv) : 0, otrosCargos: otrosCargos ? parseFloat(otrosCargos) : 0, lecturas }),
+        body: JSON.stringify({ mes, tipo, consumoTotal: parseFloat(consumoTotal), montoTotal: parseFloat(montoTotal), cargoFijo: cargoFijo ? parseFloat(cargoFijo) : 0, igv: igv ? parseFloat(igv) : 0, otrosCargos: otrosCargos ? parseFloat(otrosCargos) : 0, lecturas: lecturasNormalizadas }),
       });
       const data = await res.json();
       toast.dismiss(t);
@@ -208,11 +238,13 @@ export default function GastosPage() {
     setMes(""); setTipo("luz"); setConsumoTotal(""); setMontoTotal("");
     setCargoFijo(""); setIgv(""); setOtrosCargos(""); setGastoEditando(null); setPasoModal(1);
     const conMedidor = locales.filter(l => l.tipo !== "casa");
-    setLecturas(conMedidor.map(l => ({ localId: l._id, medidorNumero: 1, lecturaAnterior: 0, lecturaActual: 0 })));
+    setLecturas(conMedidor.map(l => ({ localId: l._id, medidorNumero: 1, lecturaAnterior: "", lecturaActual: "" })));
   };
 
-  const updateLectura = useCallback((index: number, field: string, value: number) => {
-    setLecturas(prev => { const n = [...prev]; (n[index] as any)[field] = value; return n; });
+  const updateLectura = useCallback((index: number, field: "lecturaAnterior" | "lecturaActual", value: ValorLectura) => {
+    setLecturas(prev => prev.map((lectura, i) => (
+      i === index ? { ...lectura, [field]: value } : lectura
+    )));
   }, []);
 
   // Listen for global FAB click
@@ -235,34 +267,46 @@ export default function GastosPage() {
   useEffect(() => {
     if (showNuevoGasto && !gastoEditando && locales.length > 0) {
       const conMedidor = locales.filter(l => l.tipo !== "casa");
-      let nuevas: any[] = [];
+      let nuevas: LecturaFormulario[] = [];
       conMedidor.forEach(local => {
         const esProfesor = local.tipo === "profesor" || local.nombre.toLowerCase().includes("academia");
         if (tipo === "agua" && esProfesor) {
-          nuevas.push({ localId: local._id, medidorNumero: 1, lecturaAnterior: 0, lecturaActual: 0 });
-          nuevas.push({ localId: local._id, medidorNumero: 2, lecturaAnterior: 0, lecturaActual: 0 });
+          nuevas.push({ localId: local._id, medidorNumero: 1, lecturaAnterior: "", lecturaActual: "" });
+          nuevas.push({ localId: local._id, medidorNumero: 2, lecturaAnterior: "", lecturaActual: "" });
         } else {
-          nuevas.push({ localId: local._id, medidorNumero: 1, lecturaAnterior: 0, lecturaActual: 0 });
+          nuevas.push({ localId: local._id, medidorNumero: 1, lecturaAnterior: "", lecturaActual: "" });
         }
       });
       if (gastos.length > 0) {
-        const ultimo = gastos.filter(g => g.tipo === tipo).sort((a, b) => b.mes.localeCompare(a.mes))[0];
+        const ultimo = gastos
+          .filter(g => g.tipo === tipo && (!mes || g.mes < mes))
+          .sort((a, b) => b.mes.localeCompare(a.mes))[0];
         if (ultimo) {
           nuevas = nuevas.map(lec => {
             const found = ultimo.lecturas.find(l => {
               const id = typeof l.localId === "string" ? l.localId : l.localId._id;
               return id === lec.localId && (l.medidorNumero || 1) === (lec.medidorNumero || 1);
             });
-            return { ...lec, lecturaAnterior: found ? found.lecturaActual : 0, lecturaActual: 0 };
+            const local = locales.find(item => item._id === lec.localId);
+            const panaderiaManual = mes === PERIODO_PANADERIA_MANUAL && local?.tipo === "panaderia";
+            return {
+              ...lec,
+              lecturaAnterior: panaderiaManual ? "" : (found ? found.lecturaActual : ""),
+              lecturaActual: "",
+            };
           });
         }
       }
       setLecturas(nuevas);
     }
-  }, [showNuevoGasto, tipo, gastoEditando, gastos, locales]);
+  }, [showNuevoGasto, tipo, gastoEditando, gastos, locales, mes]);
 
   const calcularConsumoLecturas = () =>
-    lecturas.reduce((t, l) => { const c = l.lecturaActual - l.lecturaAnterior; return t + (c > 0 ? c : 0); }, 0);
+    lecturas.reduce((t, l) => {
+      if (l.lecturaActual === "" || l.lecturaAnterior === "") return t;
+      const c = Number(l.lecturaActual) - Number(l.lecturaAnterior);
+      return t + (c > 0 ? c : 0);
+    }, 0);
   const calcularConsumoCasa = () => {
     const total = parseFloat(consumoTotal) || 0;
     const diff  = total - calcularConsumoLecturas();

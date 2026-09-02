@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Zap, Droplets, Home } from "lucide-react";
+import { AlertTriangle, LockKeyhole, X, Zap, Droplets, Home } from "lucide-react";
 import { Local } from "@/types/gasto";
 import React from "react";
 import toast from "react-hot-toast";
@@ -29,11 +29,15 @@ interface ModalNuevoGastoProps {
   lecturas: {
     localId: string;
     medidorNumero?: number;
-    lecturaAnterior: number;
-    lecturaActual: number;
+    lecturaAnterior: number | "";
+    lecturaActual: number | "";
   }[];
   locales: Local[];
-  updateLectura: (index: number, field: string, value: number) => void;
+  updateLectura: (
+    index: number,
+    field: "lecturaAnterior" | "lecturaActual",
+    value: number | ""
+  ) => void;
   consumoCasa: number;
   consumoLecturas: number;
   gastoEditando?: string | null;
@@ -44,6 +48,7 @@ const inputCls =
   "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:border-[#0A2640] focus:ring-2 focus:ring-[#0A2640]/10 transition-all placeholder:text-gray-300";
 
 const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5";
+const PERIODO_PANADERIA_MANUAL = "2026-08";
 
 const ModalNuevoGasto = React.memo(
   ({
@@ -76,6 +81,21 @@ const ModalNuevoGasto = React.memo(
   }: ModalNuevoGastoProps) => {
     const [isTransitioning, setIsTransitioning] = React.useState(false);
     const unit = tipo === "luz" ? "kWh" : "m³";
+    const panaderia = locales.find((local) => local.tipo === "panaderia");
+    const consumoPanaderia = panaderia
+      ? lecturas
+          .filter((lectura) => lectura.localId === panaderia._id)
+          .reduce((total, lectura) => {
+            if (lectura.lecturaAnterior === "" || lectura.lecturaActual === "") return total;
+            return total + Math.max(0, Number(lectura.lecturaActual) - Number(lectura.lecturaAnterior));
+          }, 0)
+      : 0;
+    const precioEfectivo = Number(consumoTotal) > 0
+      ? Number(montoTotal) / Number(consumoTotal)
+      : 0;
+    const montoPanaderia = Math.round(
+      (consumoPanaderia * precioEfectivo + Number.EPSILON) * 100
+    ) / 100;
 
     if (!showNuevoGasto) return null;
 
@@ -256,6 +276,7 @@ const ModalNuevoGasto = React.memo(
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={consumoTotal}
                           onChange={(e) => setConsumoTotal(e.target.value)}
                           className={inputCls + " pr-14"}
@@ -268,7 +289,7 @@ const ModalNuevoGasto = React.memo(
                       </div>
                     </div>
                     <div>
-                      <label className={labelCls}>Monto total (S/)</label>
+                      <label className={labelCls}>Total final del recibo (incluye cargos)</label>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold">
                           S/
@@ -276,6 +297,7 @@ const ModalNuevoGasto = React.memo(
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={montoTotal}
                           onChange={(e) => setMontoTotal(e.target.value)}
                           className={inputCls + " pl-9"}
@@ -283,15 +305,24 @@ const ModalNuevoGasto = React.memo(
                           required
                         />
                       </div>
+                      <p className="mt-1.5 text-[11px] leading-4 text-gray-500">
+                        Sin deuda anterior, mora, reconexión ni cuotas ajenas al periodo.
+                      </p>
                     </div>
                   </div>
 
                   {/* Cargos adicionales — colapsados visualmente */}
                   <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                      Cargos adicionales (opcional)
-                    </p>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Desglose del recibo (opcional)
+                      </p>
+                      <p className="mt-1 text-[11px] leading-4 text-gray-500">
+                        Es informativo: estos importes ya deben estar incluidos en el total facturado.
+                        Usa “Otros” para alumbrado público, mantenimiento, electrificación, intereses y ajustes.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-[11px] text-gray-400 mb-1.5">
                           Cargo fijo
@@ -301,6 +332,7 @@ const ModalNuevoGasto = React.memo(
                           <input
                             type="number"
                             step="0.01"
+                            min="0"
                             value={cargoFijo}
                             onChange={(e) => setCargoFijo(e.target.value)}
                             className="w-full pl-8 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:border-[#0A2640] focus:ring-2 focus:ring-[#0A2640]/10 transition-all"
@@ -317,6 +349,7 @@ const ModalNuevoGasto = React.memo(
                           <input
                             type="number"
                             step="0.01"
+                            min="0"
                             value={igv}
                             onChange={(e) => setIgv(e.target.value)}
                             className="w-full pl-8 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:border-[#0A2640] focus:ring-2 focus:ring-[#0A2640]/10 transition-all"
@@ -326,13 +359,14 @@ const ModalNuevoGasto = React.memo(
                       </div>
                       <div>
                         <label className="block text-[11px] text-gray-400 mb-1.5">
-                          Otros cargos
+                          Otros del periodo
                         </label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400">S/</span>
                           <input
                             type="number"
                             step="0.01"
+                            min="0"
                             value={otrosCargos}
                             onChange={(e) => setOtrosCargos(e.target.value)}
                             className="w-full pl-8 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:border-[#0A2640] focus:ring-2 focus:ring-[#0A2640]/10 transition-all"
@@ -388,9 +422,17 @@ const ModalNuevoGasto = React.memo(
                       const local = locales.find(
                         (l) => l._id === lectura.localId
                       );
-                      const consumo =
-                        lectura.lecturaActual - lectura.lecturaAnterior;
-                      const isOk = consumo >= 0;
+                      const lecturaCompleta = lectura.lecturaAnterior !== "" && lectura.lecturaActual !== "";
+                      const consumo = lecturaCompleta
+                        ? Number(lectura.lecturaActual) - Number(lectura.lecturaAnterior)
+                        : 0;
+                      const isOk = lecturaCompleta && consumo >= 0;
+                      const panaderiaManual = !gastoEditando
+                        && mes === PERIODO_PANADERIA_MANUAL
+                        && local?.tipo === "panaderia";
+                      const lecturaAnteriorBloqueada = !gastoEditando
+                        && !panaderiaManual
+                        && lectura.lecturaAnterior !== "";
 
                       return (
                         <div
@@ -417,6 +459,12 @@ const ModalNuevoGasto = React.memo(
                                 <p className="text-[10px] text-gray-400 capitalize">
                                   {local?.tipo}
                                 </p>
+                                {panaderiaManual && (
+                                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Lectura anterior manual por incidencia
+                                  </span>
+                                )}
                               </div>
                             </div>
                             {/* Consumo badge */}
@@ -427,27 +475,38 @@ const ModalNuevoGasto = React.memo(
                                   : "bg-gray-100 text-gray-400"
                               }`}
                             >
-                              {isOk ? consumo.toFixed(2) : "0.00"} {unit}
+                              {isOk ? `${consumo.toFixed(2)} ${unit}` : "Pendiente"}
                             </span>
                           </div>
 
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-[11px] text-gray-500 font-medium mb-1.5">
+                              <label className="flex items-center gap-1 text-[11px] text-gray-500 font-medium mb-1.5">
                                 Lectura anterior
+                                {lecturaAnteriorBloqueada && <LockKeyhole className="h-3 w-3" aria-label="Dato del periodo anterior" />}
                               </label>
                               <input
                                 type="number"
                                 step="0.01"
+                                min="0"
                                 value={lectura.lecturaAnterior}
                                 onChange={(e) =>
                                   updateLectura(
                                     index,
                                     "lecturaAnterior",
-                                    parseFloat(e.target.value) || 0
+                                    e.target.value === "" ? "" : Number(e.target.value)
                                   )
                                 }
-                                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:border-[#0A2640] focus:ring-2 focus:ring-[#0A2640]/10 transition-all"
+                                readOnly={lecturaAnteriorBloqueada}
+                                required
+                                placeholder={panaderiaManual ? "Ingresar manualmente" : "0.00"}
+                                className={`w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-[#0A2640] focus:ring-2 focus:ring-[#0A2640]/10 transition-all ${
+                                  lecturaAnteriorBloqueada
+                                    ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed"
+                                    : panaderiaManual
+                                      ? "bg-amber-50 border-amber-300 text-amber-950"
+                                      : "bg-white border-gray-200 text-gray-800"
+                                }`}
                               />
                             </div>
                             <div>
@@ -457,14 +516,17 @@ const ModalNuevoGasto = React.memo(
                               <input
                                 type="number"
                                 step="0.01"
+                                min="0"
                                 value={lectura.lecturaActual}
                                 onChange={(e) =>
                                   updateLectura(
                                     index,
                                     "lecturaActual",
-                                    parseFloat(e.target.value) || 0
+                                    e.target.value === "" ? "" : Number(e.target.value)
                                   )
                                 }
+                                required
+                                placeholder="0.00"
                                 className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:border-[#0A2640] focus:ring-2 focus:ring-[#0A2640]/10 transition-all"
                               />
                             </div>
@@ -473,6 +535,38 @@ const ModalNuevoGasto = React.memo(
                       );
                     })}
                   </div>
+
+                  {tipo === "luz" && precioEfectivo > 0 && (
+                    <section className="rounded-2xl bg-[#0A2640] p-4 text-white" aria-label="Vista previa del cálculo de Panadería">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-sm font-semibold">Cálculo de Panadería</h3>
+                          <p className="mt-1 text-xs leading-5 text-blue-100">
+                            Precio efectivo con IGV, cargo fijo y demás conceptos incluidos en el total final.
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-lg bg-white/10 px-2.5 py-1 text-xs font-semibold tabular-nums">
+                          S/ {precioEfectivo.toFixed(4)} por kWh
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-baseline gap-2 border-t border-white/15 pt-4 tabular-nums">
+                        {consumoPanaderia > 0 ? (
+                          <>
+                            <span className="text-sm font-semibold">{consumoPanaderia.toFixed(2)} kWh</span>
+                            <span className="text-blue-200">×</span>
+                            <span className="text-sm font-semibold">S/ {precioEfectivo.toFixed(4)}</span>
+                            <span className="text-blue-200">=</span>
+                            <strong className="text-xl">S/ {montoPanaderia.toFixed(2)}</strong>
+                          </>
+                        ) : (
+                          <span className="text-sm text-blue-100">
+                            Completa ambas lecturas de Panadería para ver su monto.
+                          </span>
+                        )}
+                      </div>
+                    </section>
+                  )}
                 </div>
               )}
             </div>

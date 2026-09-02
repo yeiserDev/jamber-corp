@@ -4,6 +4,7 @@ import Gasto from '@/lib/models/Gasto';
 import '@/lib/models/Local';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/jwt';
+import { BillingValidationError, calcularDistribucion } from '@/lib/billing/calcularDistribucion';
 
 // GET - Obtener todos los gastos
 export async function GET(request: Request) {
@@ -56,59 +57,23 @@ export async function POST(request: Request) {
 
     const { mes, tipo, consumoTotal, montoTotal, lecturas, cargoFijo, igv, otrosCargos } = body;
 
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes) || !['luz', 'agua'].includes(tipo)) {
+      throw new BillingValidationError('El periodo o el tipo de servicio no es válido');
+    }
+
     // Calcular el consumo de cada medidor
-    const lecturasConConsumo = lecturas.map((lectura: any) => ({
-      ...lectura,
-      consumo: lectura.lecturaActual - lectura.lecturaAnterior,
-    }));
-
-    // Sumar el consumo total de todos los medidores con lectura
-    const consumoTotalLocales = lecturasConConsumo.reduce(
-      (sum: number, lectura: any) => sum + lectura.consumo,
-      0
-    );
-
-    // Calcular el consumo de la casa (diferencia entre recibo total y suma de medidores)
-    const consumoCasa = consumoTotal - consumoTotalLocales;
-
-    // Calcular el costo por kWh o m³
-    const costoPorUnidad = montoTotal / consumoTotal;
-
-    // Agrupar consumo por local (sumar si hay múltiples medidores)
-    const consumoPorLocal = lecturasConConsumo.reduce((acc: any, lectura: any) => {
-      const localId = lectura.localId.toString();
-      if (!acc[localId]) {
-        acc[localId] = { localId: lectura.localId, consumo: 0 };
-      }
-      acc[localId].consumo += lectura.consumo;
-      return acc;
-    }, {});
-
-    // Obtener todos los locales para verificar tipos
     const Local = (await import('@/lib/models/Local')).default;
     const todosLocales = await Local.find();
-
-    // Calcular el monto a cobrar a cada local (proporcional al consumo)
-    const costosPorLocal = Object.values(consumoPorLocal).map((item: any) => {
-      const monto = item.consumo * costoPorUnidad;
-
-      return {
-        localId: item.localId,
-        consumo: item.consumo,
-        monto: parseFloat(monto.toFixed(2)),
-      };
-    });
-
-    // Buscar el local "Casa" y agregar su consumo automáticamente
     const casaLocal = todosLocales.find((l: any) => l.tipo === 'casa');
-
-    if (casaLocal && consumoCasa > 0) {
-      costosPorLocal.push({
-        localId: casaLocal._id,
-        consumo: parseFloat(consumoCasa.toFixed(2)),
-        monto: parseFloat((consumoCasa * costoPorUnidad).toFixed(2)),
-      });
-    }
+    const calculo = calcularDistribucion({
+      consumoTotal,
+      montoTotal,
+      cargoFijo,
+      igv,
+      otrosCargos,
+      lecturas,
+      casaLocalId: casaLocal?._id,
+    });
 
     // Crear el gasto
     const gasto = await Gasto.create({
@@ -116,11 +81,11 @@ export async function POST(request: Request) {
       tipo,
       consumoTotal,
       montoTotal,
-      cargoFijo: cargoFijo || 0,
-      igv: igv || 0,
-      otrosCargos: otrosCargos || 0,
-      lecturas: lecturasConConsumo,
-      costosPorLocal,
+      cargoFijo: calculo.cargoFijo,
+      igv: calculo.igv,
+      otrosCargos: calculo.otrosCargos,
+      lecturas: calculo.lecturasConConsumo,
+      costosPorLocal: calculo.costosPorLocal,
     });
 
     const gastoPopulado = await Gasto.findById(gasto._id)
@@ -132,15 +97,19 @@ export async function POST(request: Request) {
         success: true,
         gasto: gastoPopulado,
         resumen: {
-          consumoTotalLocales,
-          costoPorUnidad: parseFloat(costoPorUnidad.toFixed(4)),
-          totalCobrado: costosPorLocal.reduce((sum: number, c: any) => sum + c.monto, 0),
+          consumoTotalLocales: calculo.consumoTotalLocales,
+          costoPorUnidad: parseFloat(calculo.costoPorUnidad.toFixed(4)),
+          totalCobrado: calculo.costosPorLocal.reduce((sum, c) => sum + c.monto, 0),
         },
       },
       { status: 201 }
     );
   } catch (error: any) {
     console.error('Error al crear gasto:', error);
+
+    if (error instanceof BillingValidationError) {
+      return NextResponse.json({ success: false, message: error.message }, { status: 400 });
+    }
 
     // Manejar error de duplicado
     if (error.code === 11000) {
