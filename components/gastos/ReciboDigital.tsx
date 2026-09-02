@@ -137,6 +137,8 @@ export const SERIE_PANADERIA: MesPanaderia[] = [
     periodo: "16 jul al 17 ago 2026",
     fechaAnterior: "16 de julio",
     fechaActual: "17 de agosto",
+    medidorAppAnterior: 13213.64,
+    medidorAppActual: 13707.92,
     desglose: {
       precioBase: 0.6234, energia: 440.62, cargoFijo: 2.24, mantenimiento: 1.40,
       alumbrado: 35.20, interes: 0.94, igv: 86.47, electrificacion: 7.77,
@@ -267,9 +269,14 @@ export default function ReciboDigital({
   }
   const datos = idx >= 0 ? serie[idx] : undefined;
   const anterior = idx > 0 ? serie[idx - 1] : undefined;
+  const d = datos?.desglose;
+  const montoOficial = datos ? totalRecibo(datos) : montoRecibo;
+  const registroDifiereDelRecibo =
+    datos != null && Math.abs(montoRecibo - montoOficial) >= 0.02;
 
   const tarifaReal =
-    consumoTotalPropiedad > 0 ? montoRecibo / consumoTotalPropiedad : 0;
+    consumoTotalPropiedad > 0 ? montoOficial / consumoTotalPropiedad : 0;
+  const montoLocalCalculado = consumoLocal * tarifaReal;
 
   const puedeReconciliar =
     datos?.medidorRealAnterior != null && datos?.medidorRealActual != null;
@@ -301,8 +308,11 @@ export default function ReciboDigital({
      desglose suman exactamente su monto y ella lo puede comprobar con
      calculadora.
   */
-  const d = datos?.desglose;
-  const parte = montoRecibo > 0 ? montoLocal / montoRecibo : 0;
+  const parte = consumoTotalPropiedad > 0
+    ? consumoLocal / consumoTotalPropiedad
+    : montoRecibo > 0
+      ? montoLocal / montoRecibo
+      : 0;
 
   const suEnergia = d ? restaDeElla * d.precioBase : 0;
   const suIgv = suEnergia * 0.18;
@@ -312,6 +322,9 @@ export default function ReciboDigital({
     ? {
         energia: d.energia * parte,
         alumbrado: d.alumbrado * parte,
+        cargoFijo: d.cargoFijo * parte,
+        mantenimiento: d.mantenimiento * parte,
+        interes: d.interes * parte,
         fijos: (d.cargoFijo + d.mantenimiento + d.interes) * parte,
         igv: d.igv * parte,
         electrificacion: d.electrificacion * parte,
@@ -320,10 +333,10 @@ export default function ReciboDigital({
     : null;
 
   /* Todo anclado en los kWh que ella conto, para que la resta cierre exacta:
-     leFaltaba - amortiguado = montoLocal - suTotal */
+     leFaltaba - amortiguado = montoLocalCalculado - suTotal */
   const suTotalCompleto = restaDeElla * tarifaReal;
   const leFaltaba = suTotalCompleto - suTotal;
-  const amortiguado = suTotalCompleto - montoLocal;
+  const amortiguado = suTotalCompleto - montoLocalCalculado;
 
   return createPortal(
     <div
@@ -365,6 +378,16 @@ export default function ReciboDigital({
         </div>
 
         <div className="recibo-scroll flex-1 overflow-y-auto">
+          {registroDifiereDelRecibo && (
+            <div className="no-imprimir mx-5 sm:mx-7 mt-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3">
+              <p className="text-[14px] leading-relaxed text-red-950">
+                Revisa el registro antes de compartir: se guardó S/{" "}
+                {montoRecibo.toFixed(2)}, pero el recibo oficial suma S/{" "}
+                {montoOficial.toFixed(2)}. Este reporte usa el importe oficial.
+              </p>
+            </div>
+          )}
+
           {/* Sin lecturas cargadas para este mes: dilo, no lo escondas */}
           {!datos && (
             <div className="mx-5 sm:mx-7 mt-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
@@ -474,7 +497,7 @@ export default function ReciboDigital({
                   <div className="border-t border-neutral-300 pt-2">
                     <Fila
                       concepto="Le cobramos"
-                      valor={`S/ ${montoLocal.toFixed(2)}`}
+                      valor={`S/ ${montoLocalCalculado.toFixed(2)}`}
                       fuerte
                     />
                   </div>
@@ -486,7 +509,7 @@ export default function ReciboDigital({
                   Diferencia
                 </span>
                 <span className="font-mono text-[19px] font-black text-neutral-900 tabular-nums">
-                  S/ {Math.abs(montoLocal - suTotal).toFixed(2)}
+                  S/ {Math.abs(montoLocalCalculado - suTotal).toFixed(2)}
                 </span>
               </div>
 
@@ -531,38 +554,55 @@ export default function ReciboDigital({
                 cobrados por Luz del Sur.
               </p>
 
+              <div className="mb-4 bg-[#ffe94a] px-4 py-3">
+                <p className="text-[14px] leading-relaxed text-neutral-900">
+                  La energía representa {(d.energia / montoOficial * 100).toFixed(2)}%
+                  del recibo. Los impuestos, cargos y ajustes completan el{" "}
+                  {((montoOficial - d.energia) / montoOficial * 100).toFixed(2)}%
+                  restante: S/ {(montoOficial - d.energia).toFixed(2)}.
+                </p>
+              </div>
+
               <div className="rounded-lg border-2 border-neutral-900 bg-white p-4">
                 <div className="space-y-2">
                   <Fila
-                    concepto={`Energía (recibo S/ ${d.energia.toFixed(2)})`}
+                    concepto={`Energía · ${(d.energia / montoOficial * 100).toFixed(2)}% (S/ ${d.energia.toFixed(2)})`}
                     valor={`S/ ${nuestro.energia.toFixed(2)}`}
                   />
                   <Fila
-                    concepto={`Alumbrado público (S/ ${d.alumbrado.toFixed(2)})`}
+                    concepto={`Alumbrado · ${(d.alumbrado / montoOficial * 100).toFixed(2)}% (S/ ${d.alumbrado.toFixed(2)})`}
                     valor={`S/ ${nuestro.alumbrado.toFixed(2)}`}
                   />
                   <Fila
-                    concepto={`Cargo fijo, mant. e interés (S/ ${(d.cargoFijo + d.mantenimiento + d.interes).toFixed(2)})`}
-                    valor={`S/ ${nuestro.fijos.toFixed(2)}`}
+                    concepto={`Cargo fijo · ${(d.cargoFijo / montoOficial * 100).toFixed(2)}% (S/ ${d.cargoFijo.toFixed(2)})`}
+                    valor={`S/ ${nuestro.cargoFijo.toFixed(2)}`}
                   />
                   <Fila
-                    concepto={`IGV (recibo S/ ${d.igv.toFixed(2)})`}
+                    concepto={`Mantenimiento · ${(d.mantenimiento / montoOficial * 100).toFixed(2)}% (S/ ${d.mantenimiento.toFixed(2)})`}
+                    valor={`S/ ${nuestro.mantenimiento.toFixed(2)}`}
+                  />
+                  <Fila
+                    concepto={`Interés · ${(d.interes / montoOficial * 100).toFixed(2)}% (S/ ${d.interes.toFixed(2)})`}
+                    valor={`S/ ${nuestro.interes.toFixed(2)}`}
+                  />
+                  <Fila
+                    concepto={`IGV · ${(d.igv / montoOficial * 100).toFixed(2)}% (S/ ${d.igv.toFixed(2)})`}
                     valor={`S/ ${nuestro.igv.toFixed(2)}`}
                   />
                   <Fila
-                    concepto={`Electrificación rural (S/ ${d.electrificacion.toFixed(2)})`}
+                    concepto={`Electrificación rural · ${(d.electrificacion / montoOficial * 100).toFixed(2)}% (S/ ${d.electrificacion.toFixed(2)})`}
                     valor={`S/ ${nuestro.electrificacion.toFixed(2)}`}
                   />
                   {Math.abs(d.ajustes) >= 0.005 && (
                     <Fila
-                      concepto={`Redondeos (recibo S/ ${d.ajustes.toFixed(2)})`}
+                      concepto={`Redondeos · ${(d.ajustes / montoOficial * 100).toFixed(2)}% (S/ ${d.ajustes.toFixed(2)})`}
                       valor={`S/ ${nuestro.ajustes.toFixed(2)}`}
                     />
                   )}
                   <div className="border-t border-neutral-300 pt-2">
                     <Fila
                       concepto="Total Panadería"
-                      valor={`S/ ${montoLocal.toFixed(2)}`}
+                      valor={`S/ ${montoLocalCalculado.toFixed(2)}`}
                       fuerte
                     />
                   </div>
@@ -590,7 +630,7 @@ export default function ReciboDigital({
                 <span>S/ {tarifaReal.toFixed(4)}</span>
                 <span className="text-neutral-500">=</span>
                 <span className="text-[23px] font-black">
-                  S/ {montoLocal.toFixed(2)}
+                  S/ {montoLocalCalculado.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -601,7 +641,7 @@ export default function ReciboDigital({
               </p>
               <Fila
                 concepto="Recibo completo de Luz del Sur"
-                valor={`S/ ${montoRecibo.toFixed(2)}`}
+                valor={`S/ ${montoOficial.toFixed(2)}`}
               />
               <Fila
                 concepto="Entre los kWh de toda la propiedad"
