@@ -207,6 +207,35 @@ function Fila({
   );
 }
 
+function FilaDesglose({
+  concepto,
+  montoRecibo,
+  montoLocal,
+}: {
+  concepto: string;
+  montoRecibo: number;
+  montoLocal: number;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-neutral-200 py-3 last:border-b-0">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold leading-snug text-neutral-900">
+          {concepto}
+        </p>
+        <p className="mt-0.5 text-xs text-neutral-500">
+          Recibo completo: S/ {montoRecibo.toFixed(2)}
+        </p>
+      </div>
+      <div className="text-right">
+        <p className="text-xs font-medium text-neutral-500">Su parte</p>
+        <p className="font-mono text-base font-bold tabular-nums text-neutral-900">
+          S/ {montoLocal.toFixed(2)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* Titulo de seccion */
 function Rotulo({ children }: { children: React.ReactNode }) {
   return (
@@ -556,47 +585,55 @@ export default function ReciboDigital({
 
               <div className="mb-4 bg-[#ffe94a] px-4 py-3">
                 <p className="text-[14px] leading-relaxed text-neutral-900">
-                  La energía representa {(d.energia / montoOficial * 100).toFixed(2)}%
-                  del recibo. Los impuestos, cargos y ajustes completan el{" "}
-                  {((montoOficial - d.energia) / montoOficial * 100).toFixed(2)}%
-                  restante: S/ {(montoOficial - d.energia).toFixed(2)}.
+                  De los S/ {montoOficial.toFixed(2)}, S/ {d.energia.toFixed(2)}
+                  corresponden a energía y S/{" "}
+                  {(montoOficial - d.energia).toFixed(2)} a impuestos, cargos y
+                  ajustes del recibo.
                 </p>
               </div>
 
               <div className="rounded-lg border-2 border-neutral-900 bg-white p-4">
-                <div className="space-y-2">
-                  <Fila
-                    concepto={`Energía · ${(d.energia / montoOficial * 100).toFixed(2)}% (S/ ${d.energia.toFixed(2)})`}
-                    valor={`S/ ${nuestro.energia.toFixed(2)}`}
+                <div>
+                  <FilaDesglose
+                    concepto="Consumo de energía"
+                    montoRecibo={d.energia}
+                    montoLocal={nuestro.energia}
                   />
-                  <Fila
-                    concepto={`Alumbrado · ${(d.alumbrado / montoOficial * 100).toFixed(2)}% (S/ ${d.alumbrado.toFixed(2)})`}
-                    valor={`S/ ${nuestro.alumbrado.toFixed(2)}`}
+                  <FilaDesglose
+                    concepto="Alumbrado público"
+                    montoRecibo={d.alumbrado}
+                    montoLocal={nuestro.alumbrado}
                   />
-                  <Fila
-                    concepto={`Cargo fijo · ${(d.cargoFijo / montoOficial * 100).toFixed(2)}% (S/ ${d.cargoFijo.toFixed(2)})`}
-                    valor={`S/ ${nuestro.cargoFijo.toFixed(2)}`}
+                  <FilaDesglose
+                    concepto="Cargo fijo"
+                    montoRecibo={d.cargoFijo}
+                    montoLocal={nuestro.cargoFijo}
                   />
-                  <Fila
-                    concepto={`Mantenimiento · ${(d.mantenimiento / montoOficial * 100).toFixed(2)}% (S/ ${d.mantenimiento.toFixed(2)})`}
-                    valor={`S/ ${nuestro.mantenimiento.toFixed(2)}`}
+                  <FilaDesglose
+                    concepto="Mantenimiento y reposición de conexión"
+                    montoRecibo={d.mantenimiento}
+                    montoLocal={nuestro.mantenimiento}
                   />
-                  <Fila
-                    concepto={`Interés · ${(d.interes / montoOficial * 100).toFixed(2)}% (S/ ${d.interes.toFixed(2)})`}
-                    valor={`S/ ${nuestro.interes.toFixed(2)}`}
+                  <FilaDesglose
+                    concepto="Interés compensatorio"
+                    montoRecibo={d.interes}
+                    montoLocal={nuestro.interes}
                   />
-                  <Fila
-                    concepto={`IGV · ${(d.igv / montoOficial * 100).toFixed(2)}% (S/ ${d.igv.toFixed(2)})`}
-                    valor={`S/ ${nuestro.igv.toFixed(2)}`}
+                  <FilaDesglose
+                    concepto={`IGV (18% del subtotal de S/ ${(d.energia + d.cargoFijo + d.mantenimiento + d.alumbrado + d.interes).toFixed(2)})`}
+                    montoRecibo={d.igv}
+                    montoLocal={nuestro.igv}
                   />
-                  <Fila
-                    concepto={`Electrificación rural · ${(d.electrificacion / montoOficial * 100).toFixed(2)}% (S/ ${d.electrificacion.toFixed(2)})`}
-                    valor={`S/ ${nuestro.electrificacion.toFixed(2)}`}
+                  <FilaDesglose
+                    concepto="Electrificación rural (Ley N.º 28749)"
+                    montoRecibo={d.electrificacion}
+                    montoLocal={nuestro.electrificacion}
                   />
                   {Math.abs(d.ajustes) >= 0.005 && (
-                    <Fila
-                      concepto={`Redondeos · ${(d.ajustes / montoOficial * 100).toFixed(2)}% (S/ ${d.ajustes.toFixed(2)})`}
-                      valor={`S/ ${nuestro.ajustes.toFixed(2)}`}
+                    <FilaDesglose
+                      concepto="Ajustes por redondeo"
+                      montoRecibo={d.ajustes}
+                      montoLocal={nuestro.ajustes}
                     />
                   )}
                   <div className="border-t border-neutral-300 pt-2">
