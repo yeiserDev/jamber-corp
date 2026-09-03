@@ -46,6 +46,7 @@ function crearReportePanaderiaPdf(datos) {
   const porcentaje = proporcion * 100;
   const consumoCalculado = datos.lecturaActual - datos.lecturaAnterior;
   const subtotalAfecto = d.energia + d.cargoFijo + d.mantenimiento + d.alumbrado + d.interes;
+  const baseAfectaPanaderia = subtotalAfecto * proporcion;
 
   const proporcional = {
     energia: d.energia * proporcion,
@@ -381,7 +382,7 @@ function crearReportePanaderiaPdf(datos) {
     `${numero(datos.consumoLocal)} kWh x S/ ${numero(d.precioBase, 4)}`,
     soles(proporcional.energia)
   );
-  parrafo("Cada concepto del recibo se multiplica por el mismo 69.93% de participación. Por eso el importe no contiene cargos ocultos.");
+  parrafo("Cada concepto del recibo se multiplica por el mismo 69.93% de participación. En el caso del IGV, primero se obtiene la base afecta de Panadería y después se aplica la tasa legal del 18%.");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
   doc.setTextColor(120, 113, 108);
@@ -400,6 +401,20 @@ function crearReportePanaderiaPdf(datos) {
   fila("TOTAL PROPORCIONAL", datos.montoOficial, totalProporcional, true);
   y += 4;
 
+  parrafo("¿Por qué el IGV de Panadería es S/ 60.47?", { negrita: true, espacio: 3 });
+  formula(
+    "Primero: base afecta asignada a Panadería",
+    `${soles(subtotalAfecto)} x ${numero(proporcion, 6)}`,
+    soles(baseAfectaPanaderia)
+  );
+  formula(
+    "Después: IGV del 18% sobre esa base",
+    `${soles(baseAfectaPanaderia)} x 0.18`,
+    soles(proporcional.igv)
+  );
+  parrafo(`También se puede comprobar con el IGV completo del recibo: ${soles(d.igv)} x ${numero(proporcion, 6)} = ${soles(proporcional.igv)}. El 15.05% que aparece al comparar el IGV con el total no es la tasa del impuesto; la tasa aplicada a la base afecta sí es 18%.`);
+
+  nuevaPagina();
   tituloSeccion(4, "Por qué el alumbrado sale S/ 24.62");
   formula(
     "Alumbrado público proporcional",
