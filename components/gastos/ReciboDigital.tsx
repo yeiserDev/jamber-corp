@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Printer } from "lucide-react";
+import { Download, LoaderCircle, Printer, X } from "lucide-react";
+import { generarReportePanaderiaPdf } from "@/utils/reportePanaderiaPdf";
 
 /*
    Serie verificada contra los recibos fisicos de Luz del Sur
@@ -269,6 +270,9 @@ export default function ReciboDigital({
   consumoLocal,
   serie = SERIE_PANADERIA,
 }: ReciboDigitalProps) {
+  const [descargandoPdf, setDescargandoPdf] = useState(false);
+  const [errorPdf, setErrorPdf] = useState("");
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -366,6 +370,36 @@ export default function ReciboDigital({
   const suTotalCompleto = restaDeElla * tarifaReal;
   const leFaltaba = suTotalCompleto - suTotal;
   const amortiguado = suTotalCompleto - montoLocalCalculado;
+
+  const descargarPdfDetallado = async () => {
+    if (!datos || !d || datos.medidorAppAnterior == null || datos.medidorAppActual == null) {
+      setErrorPdf("Faltan las lecturas necesarias para generar el PDF de este mes.");
+      return;
+    }
+
+    setDescargandoPdf(true);
+    setErrorPdf("");
+    try {
+      generarReportePanaderiaPdf({
+        nombreLocal,
+        etiquetaMes: datos.etiqueta,
+        periodo: datos.periodo,
+        suministro: SUMINISTRO,
+        lecturaAnterior: datos.medidorAppAnterior,
+        lecturaActual: datos.medidorAppActual,
+        consumoLocal,
+        consumoTotal: consumoTotalPropiedad,
+        montoOficial,
+        cantidadOcupantes: 4,
+        desglose: d,
+      });
+    } catch (error) {
+      console.error("No se pudo generar el PDF", error);
+      setErrorPdf("No se pudo descargar el PDF. Inténtalo nuevamente.");
+    } finally {
+      setDescargandoPdf(false);
+    }
+  };
 
   return createPortal(
     <div
@@ -770,20 +804,39 @@ export default function ReciboDigital({
         </div>
 
         {/* ACCIONES */}
-        <div className="no-imprimir flex-shrink-0 px-5 sm:px-7 py-4 bg-white border-t border-neutral-200 flex gap-2.5">
+        <div className="no-imprimir flex-shrink-0 px-5 sm:px-7 py-4 bg-white border-t border-neutral-200">
+          {errorPdf && (
+            <p className="mb-3 text-sm text-red-700" role="alert">
+              {errorPdf}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              onClick={descargarPdfDetallado}
+              disabled={descargandoPdf || !datos || !d}
+              className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-amber-950 transition-colors hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {descargandoPdf ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="h-4 w-4" aria-hidden="true" />
+              )}
+              {descargandoPdf ? "Preparando PDF..." : "Descargar explicación en PDF"}
+            </button>
           <button
             onClick={() => window.print()}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-neutral-300 hover:bg-neutral-50 text-neutral-700 text-[15px] font-semibold transition-colors"
+              className="flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-3 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2"
           >
-            <Printer className="w-4 h-4" />
-            Imprimir o guardar PDF
+              <Printer className="h-4 w-4" aria-hidden="true" />
+            Imprimir
           </button>
           <button
             onClick={onClose}
-            className="flex-1 py-3 rounded-xl bg-neutral-900 hover:bg-black text-white text-[15px] font-semibold transition-colors"
+              className="rounded-xl bg-neutral-900 px-3 py-3 text-sm font-semibold text-white transition-colors hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2"
           >
             Cerrar
           </button>
+          </div>
         </div>
       </div>
     </div>,
