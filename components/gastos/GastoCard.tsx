@@ -85,6 +85,31 @@ export default function GastoCard({
         : costoPanaderia.localId)
     : undefined;
   const mostrarExplicacion = isLuz && !!costoPanaderia;
+  const consumosOcupantes = gasto.costosPorLocal.map(costo => {
+    const local = typeof costo.localId === "string"
+      ? locales.find(item => item._id === costo.localId)
+      : costo.localId;
+    const localId = typeof costo.localId === "string" ? costo.localId : costo.localId._id;
+    const lecturas = gasto.lecturas
+      .filter(lectura => {
+        const lecturaLocalId = typeof lectura.localId === "string"
+          ? lectura.localId
+          : lectura.localId._id;
+        return lecturaLocalId === localId;
+      })
+      .map(lectura => ({
+        medidorNumero: lectura.medidorNumero ?? 1,
+        lecturaAnterior: lectura.lecturaAnterior,
+        lecturaActual: lectura.lecturaActual,
+      }));
+
+    return {
+      nombre: local?.nombre || "Local",
+      tipo: local?.tipo || "",
+      consumo: costo.consumo,
+      lecturas,
+    };
+  });
 
   const themeColor = isLuz ? "text-amber-500" : "text-sky-500";
   const themeBg    = isLuz ? "bg-amber-50" : "bg-sky-50";
@@ -356,6 +381,7 @@ export default function GastoCard({
           consumoTotalPropiedad={gasto.consumoTotal}
           montoLocal={costoPanaderia.monto}
           consumoLocal={costoPanaderia.consumo}
+          consumosOcupantes={consumosOcupantes}
         />
       )}
     </div>

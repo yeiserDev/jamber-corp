@@ -256,6 +256,16 @@ interface ReciboDigitalProps {
   consumoTotalPropiedad: number;
   montoLocal: number;
   consumoLocal: number;
+  consumosOcupantes?: Array<{
+    nombre: string;
+    tipo: string;
+    consumo: number;
+    lecturas: Array<{
+      medidorNumero: number;
+      lecturaAnterior: number;
+      lecturaActual: number;
+    }>;
+  }>;
   serie?: MesPanaderia[];
 }
 
@@ -268,6 +278,7 @@ export default function ReciboDigital({
   consumoTotalPropiedad,
   montoLocal,
   consumoLocal,
+  consumosOcupantes = [],
   serie = SERIE_PANADERIA,
 }: ReciboDigitalProps) {
   const [descargandoPdf, setDescargandoPdf] = useState(false);
@@ -391,6 +402,7 @@ export default function ReciboDigital({
         consumoTotal: consumoTotalPropiedad,
         montoOficial,
         cantidadOcupantes: 4,
+        ocupantes: consumosOcupantes,
         desglose: d,
       });
     } catch (error) {

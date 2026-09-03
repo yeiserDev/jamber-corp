@@ -19,6 +19,27 @@ const documento = crearReportePanaderiaPdf({
   consumoTotal: 706.80,
   montoOficial: 574.70,
   cantidadOcupantes: 4,
+  ocupantes: [
+    {
+      nombre: "Academia",
+      tipo: "academia",
+      consumo: 9.30,
+      lecturas: [{ medidorNumero: 1, lecturaAnterior: 326.10, lecturaActual: 335.40 }],
+    },
+    {
+      nombre: "Panadería",
+      tipo: "panaderia",
+      consumo: 494.28,
+      lecturas: [{ medidorNumero: 1, lecturaAnterior: 13213.64, lecturaActual: 13707.92 }],
+    },
+    {
+      nombre: "Spa",
+      tipo: "spa",
+      consumo: 14.70,
+      lecturas: [{ medidorNumero: 1, lecturaAnterior: 4574.90, lecturaActual: 4589.60 }],
+    },
+    { nombre: "Casa", tipo: "casa", consumo: 188.52, lecturas: [] },
+  ],
   desglose: {
     precioBase: 0.6234,
     energia: 440.62,
