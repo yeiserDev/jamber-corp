@@ -189,8 +189,8 @@ function crearReportePanaderiaPdf(datos) {
     y += 7;
   };
 
-  const detalleOcupante = (ocupante) => {
-    asegurarEspacio(68);
+  const detalleOcupante = (ocupante, indice) => {
+    if (indice > 0) nuevaPagina();
     const nombre = nombreOcupante(ocupante);
     const parte = ocupante.consumo / datos.consumoTotal;
     const pct = parte * 100;
@@ -207,41 +207,114 @@ function crearReportePanaderiaPdf(datos) {
     const lectura = ocupante.lecturas?.[0];
     const esCasa = `${ocupante.tipo} ${ocupante.nombre}`.toLowerCase().includes("casa");
 
-    doc.setFillColor(250, 248, 242);
-    doc.setDrawColor(214, 211, 209);
-    doc.roundedRect(margen, y, anchoUtil, 8, 2, 2, "FD");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10.5);
-    doc.setTextColor(28, 25, 23);
-    doc.text(nombre, margen + 4, y + 5.5);
-    doc.setFont("courier", "bold");
-    doc.text(`${numero(ocupante.consumo)} kWh | ${numero(pct)}% | ${soles(total)}`, ancho - margen - 4, y + 5.5, { align: "right" });
-    y += 13;
+    const lineaCalculo = (concepto, operacion, resultado, resaltar = false) => {
+      if (resaltar) {
+        doc.setFillColor(255, 247, 204);
+        doc.rect(margen + 4, y - 5.2, anchoUtil - 8, 8, "F");
+      }
+      doc.setFont("helvetica", resaltar ? "bold" : "normal");
+      doc.setFontSize(9.2);
+      doc.setTextColor(41, 37, 36);
+      doc.text(concepto, margen + 7, y);
+      doc.setFont("courier", resaltar ? "bold" : "normal");
+      doc.setFontSize(8.6);
+      doc.text(operacion, 139, y, { align: "right" });
+      doc.text(resultado, ancho - margen - 7, y, { align: "right" });
+      y += 7;
+    };
 
-    doc.setFont("courier", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(68, 64, 60);
-    const lineas = [];
+    const rotuloPaso = (paso, titulo) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.2);
+      doc.setTextColor(146, 96, 0);
+      doc.text(`PASO ${paso}`, margen + 4, y);
+      doc.setTextColor(41, 37, 36);
+      doc.text(titulo.toUpperCase(), margen + 25, y);
+      y += 7;
+    };
+
+    const cajaResultado = (etiqueta, operacion, resultado) => {
+      doc.setFillColor(250, 248, 242);
+      doc.setDrawColor(231, 229, 228);
+      doc.roundedRect(margen + 4, y, anchoUtil - 8, 14, 2, 2, "FD");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(120, 113, 108);
+      doc.text(etiqueta, margen + 8, y + 4.5);
+      doc.setFont("courier", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(28, 25, 23);
+      doc.text(operacion, margen + 8, y + 10.5);
+      doc.setFont("helvetica", "bold");
+      doc.text(resultado, ancho - margen - 8, y + 10.5, { align: "right" });
+      y += 18;
+    };
+
+    doc.setFillColor(245, 190, 32);
+    doc.setDrawColor(224, 169, 0);
+    doc.roundedRect(margen, y, anchoUtil, 14, 2, 2, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(28, 25, 23);
+    doc.text(nombre, margen + 5, y + 9.5);
+    doc.setFont("courier", "bold");
+    doc.setFontSize(10);
+    doc.text(`${numero(ocupante.consumo)} kWh  |  ${soles(total)}`, ancho - margen - 5, y + 9.5, { align: "right" });
+    y += 23;
+
+    rotuloPaso(1, esCasa ? "Obtener el consumo de la casa" : "Restar las lecturas del medidor");
     if (lectura) {
-      lineas.push(`Consumo: ${numero(lectura.lecturaActual)} - ${numero(lectura.lecturaAnterior)} = ${numero(ocupante.consumo)} kWh`);
+      cajaResultado(
+        "Lectura actual menos lectura anterior",
+        `${numero(lectura.lecturaActual)} - ${numero(lectura.lecturaAnterior)}`,
+        `${numero(ocupante.consumo)} kWh`
+      );
     } else if (esCasa) {
-      lineas.push(`Consumo residual: ${numero(datos.consumoTotal)} - ${numero(consumoSubmedidores)} = ${numero(ocupante.consumo)} kWh`);
+      cajaResultado(
+        "Total principal menos los tres submedidores",
+        `${numero(datos.consumoTotal)} - ${numero(consumoSubmedidores)}`,
+        `${numero(ocupante.consumo)} kWh`
+      );
     } else {
-      lineas.push(`Consumo registrado manualmente: ${numero(ocupante.consumo)} kWh`);
+      cajaResultado("Consumo ingresado manualmente", numero(ocupante.consumo), `${numero(ocupante.consumo)} kWh`);
     }
-    lineas.push(`Participación: ${numero(ocupante.consumo)} / ${numero(datos.consumoTotal)} x 100 = ${numero(pct)}%`);
-    lineas.push(`Energía: ${numero(ocupante.consumo)} kWh x S/ ${numero(d.precioBase, 4)} = ${soles(energia)}`);
-    lineas.push(`Cargo fijo: ${soles(d.cargoFijo)} x ${numero(pct)}% = ${soles(cargoFijo)}`);
-    lineas.push(`Mantenimiento: ${soles(d.mantenimiento)} x ${numero(pct)}% = ${soles(mantenimiento)}`);
-    lineas.push(`Alumbrado público: ${soles(d.alumbrado)} x ${numero(pct)}% = ${soles(alumbrado)}`);
-    lineas.push(`Interés: ${soles(d.interes)} x ${numero(pct)}% = ${soles(interes)}`);
-    lineas.push(`Base afecta: ${soles(subtotalAfecto)} x ${numero(pct)}% = ${soles(baseAfecta)}`);
-    lineas.push(`IGV: ${soles(baseAfecta)} x 18% = ${soles(igv)}`);
-    lineas.push(`Electrificación rural: ${soles(d.electrificacion)} x ${numero(pct)}% = ${soles(electrificacion)}`);
-    lineas.push(`Redondeos: ${soles(d.ajustes)} x ${numero(pct)}% = ${soles(ajustes)}`);
-    lineas.push(`TOTAL: ${soles(datos.montoOficial)} x ${numero(pct)}% = ${soles(total)}`);
-    doc.text(lineas, margen + 4, y, { lineHeightFactor: 1.32 });
-    y += lineas.length * 4.15 + 6;
+
+    rotuloPaso(2, "Calcular qué porcentaje consumió");
+    cajaResultado(
+      "Consumo del ocupante entre consumo total",
+      `${numero(ocupante.consumo)} / ${numero(datos.consumoTotal)} x 100`,
+      `${numero(pct)}%`
+    );
+    parrafo(`Para las multiplicaciones se usa el factor decimal ${numero(parte, 6)}. Es el mismo ${numero(pct)}% escrito como decimal.`, { espacio: 6 });
+
+    rotuloPaso(3, "Calcular la base afecta al IGV");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.8);
+    doc.setTextColor(120, 113, 108);
+    doc.text("CONCEPTO", margen + 7, y);
+    doc.text("OPERACIÓN", 139, y, { align: "right" });
+    doc.text("RESULTADO", ancho - margen - 7, y, { align: "right" });
+    y += 7;
+    lineaCalculo("Energía", `${numero(ocupante.consumo)} x ${numero(d.precioBase, 4)}`, soles(energia));
+    lineaCalculo("Cargo fijo", `${numero(d.cargoFijo)} x ${numero(parte, 6)}`, soles(cargoFijo));
+    lineaCalculo("Mantenimiento", `${numero(d.mantenimiento)} x ${numero(parte, 6)}`, soles(mantenimiento));
+    lineaCalculo("Alumbrado público", `${numero(d.alumbrado)} x ${numero(parte, 6)}`, soles(alumbrado));
+    lineaCalculo("Interés", `${numero(d.interes)} x ${numero(parte, 6)}`, soles(interes));
+    lineaCalculo("BASE AFECTA", `${numero(subtotalAfecto)} x ${numero(parte, 6)}`, soles(baseAfecta), true);
+    y += 5;
+
+    rotuloPaso(4, "Agregar IGV y conceptos no incluidos en la base");
+    lineaCalculo("IGV 18%", `${numero(baseAfecta)} x 0.18`, soles(igv));
+    lineaCalculo("Electrificación rural", `${numero(d.electrificacion)} x ${numero(parte, 6)}`, soles(electrificacion));
+    lineaCalculo("Redondeos", `${numero(d.ajustes)} x ${numero(parte, 6)}`, soles(ajustes));
+    y += 5;
+
+    rotuloPaso(5, "Comprobar el total asignado");
+    cajaResultado(
+      "Total oficial multiplicado por su participación",
+      `${numero(datos.montoOficial)} x ${numero(parte, 6)}`,
+      soles(total)
+    );
   };
 
   const puntoLegal = (titulo, texto, url) => {
@@ -374,7 +447,9 @@ function crearReportePanaderiaPdf(datos) {
     (suma, ocupante) => suma + datos.montoOficial * (ocupante.consumo / datos.consumoTotal),
     0
   );
-  asegurarEspacio(30);
+  nuevaPagina();
+  tituloSeccion("7.1", "Comprobación general de los cuatro ocupantes");
+  parrafo("Al terminar las cuatro cuentas, se suman los consumos y los importes para confirmar que no falte ni se duplique ningún monto.");
   formula(
     "Comprobación final de consumos",
     ocupantes.map((ocupante) => numero(ocupante.consumo)).join(" + "),
