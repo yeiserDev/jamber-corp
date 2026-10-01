@@ -1,7 +1,7 @@
 export interface Local {
     _id: string;
     nombre: string;
-    tipo: 'panaderia' | 'spa' | 'profesor' | 'casa';
+    tipo: 'panaderia' | 'spa' | 'profesor' | 'academia' | 'casa';
     direccion: string;
 }
 
@@ -19,6 +19,11 @@ export interface Gasto {
     tipo: 'luz' | 'agua';
     consumoTotal: number;
     montoTotal: number;
+    metodoCalculo?: string;
+    tarifaEnergia?: number;
+    alumbradoPublico?: number;
+    totalDistribuido?: number;
+    diferenciaRecibo?: number;
     cargoFijo?: number;
     igv?: number;
     otrosCargos?: number;
@@ -27,6 +32,9 @@ export interface Gasto {
         localId: Local | string;
         consumo: number;
         monto: number;
+        montoEnergia?: number;
+        montoAlumbrado?: number;
+        montoIgv?: number;
     }[];
     createdAt: string;
 }

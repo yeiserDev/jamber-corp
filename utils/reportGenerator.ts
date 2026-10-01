@@ -1,4 +1,5 @@
 import { Gasto, Local } from "@/types/gasto";
+import { METODO_LUZ } from '@/lib/billing/reglaLuz';
 
 // Helper function for rounded rectangles
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
@@ -16,7 +17,9 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: n
 }
 
 export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], locales: Local[], filtroLocal?: string | null): Promise<void> => {
+    const nuevoAcuerdo = gasto.tipo === 'luz' && gasto.metodoCalculo === METODO_LUZ;
     const calcularCostoPorUnidad = (g: Gasto): number => {
+        if (nuevoAcuerdo) return g.tarifaEnergia ?? 0;
         if (g.consumoTotal === 0) return 0;
         return g.montoTotal / g.consumoTotal;
     };
@@ -30,7 +33,7 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
         const local = typeof c.localId === 'string' ? locales.find(l => l._id === c.localId) : c.localId;
         const localId = typeof c.localId === 'string' ? c.localId : c.localId._id;
         const matchesFilter = !filtroLocal || filtroLocal === "Todos los locales" || localId === filtroLocal;
-        return local && local.tipo !== 'casa' && matchesFilter;
+        return local && (local.tipo !== 'casa' || localId === filtroLocal) && matchesFilter;
     }).sort((a, b) => b.monto - a.monto);
 
     const isSpecificLocal = localesACobrar.length === 1 && filtroLocal && filtroLocal !== "Todos los locales";
@@ -59,12 +62,12 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
     const headerHeight = 220;
     const cardTop = 150;
     const metricsHeight = 120;
-    const rowHeight = 45;
+    const rowHeight = nuevoAcuerdo ? 140 : 45;
     const distribucionHeight = 60 + (localesACobrar.length * rowHeight);
     const chartHeight = historial.length > 0 ? 300 : 0;
     const footerHeight = 100;
 
-    const cardHeight = metricsHeight + distribucionHeight + chartHeight + 100;
+    const cardHeight = metricsHeight + distribucionHeight + chartHeight + 130;
     const totalHeight = cardTop + cardHeight + footerHeight;
     const canvasWidth = 800;
 
@@ -204,7 +207,7 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
     ctx.font = `bold 32px ${fontBase}`;
     ctx.fillStyle = colors.textMain;
     const localName = isSpecificLocal ? (typeof localesACobrar[0].localId === 'string' ? locales.find(l => l._id === localesACobrar[0].localId)?.nombre : (localesACobrar[0].localId as any).nombre) : '';
-    const titleText = isSpecificLocal ? `Reporte de ${isLuz ? 'Electricidad' : 'Agua'} - ${localName}` : `Reporte de ${isLuz ? 'Electricidad' : 'Agua'}`;
+    const titleText = `Reporte de ${isLuz ? 'Electricidad' : 'Agua'}`;
     ctx.fillText(titleText, cardLeft, y);
     
     ctx.font = `600 16px ${fontBase}`;
@@ -220,6 +223,11 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
     ctx.fillStyle = colors.primary;
     ctx.fillText(mesStr, cardLeft + innerWidth - textWidth - 12, y - 2);
 
+    if (isSpecificLocal) {
+        ctx.font = `600 16px ${fontBase}`;
+        ctx.fillStyle = colors.textMuted;
+        ctx.fillText(localName || 'Local', cardLeft, y + 28, innerWidth);
+    }
     y += 50;
 
     // --- DIVIDER ---
@@ -246,7 +254,7 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
     // Metric 2: Tarifa
     ctx.font = `500 13px ${fontBase}`;
     ctx.fillStyle = colors.textMuted;
-    ctx.fillText(`Tarifa por ${unit}`, cardLeft + metricWidth, y);
+    ctx.fillText(nuevoAcuerdo ? 'Tarifa de energía por kWh' : `Tarifa por ${unit}`, cardLeft + metricWidth, y);
     ctx.font = `bold 24px ${fontBase}`;
     ctx.fillStyle = colors.textMain;
     ctx.fillText(`S/ ${costoPorUnidad.toFixed(4)}`, cardLeft + metricWidth, y + 30);
@@ -292,15 +300,10 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
         ctx.fillStyle = colors.textMain;
         ctx.fillText(nombre, cardLeft + 25, y);
 
-        // Local Name and Consumption
-        ctx.font = `600 15px ${fontBase}`;
-        ctx.fillStyle = colors.textMain;
-        ctx.fillText(nombre, cardLeft + 25, y);
-
+        const nameWidth = ctx.measureText(nombre).width;
         const consumoStr = `${c.consumo.toFixed(1)} ${unit}`;
         ctx.font = `500 13px ${fontBase}`;
         ctx.fillStyle = colors.textMuted;
-        const nameWidth = ctx.measureText(nombre).width;
         ctx.fillText(consumoStr, cardLeft + 25 + nameWidth + 10, y);
 
         // Percentage & Amount
@@ -326,14 +329,34 @@ export const generarReporteImagen = async (gasto: Gasto, todosGastos: Gasto[], l
         ctx.fillStyle = colors.primary;
         ctx.fillText(montoStr, cardLeft + innerWidth - montoWidth - 12, y);
 
+        if (nuevoAcuerdo) {
+            const conceptos = [
+                ['Consumo de energía', c.montoEnergia],
+                ['Alumbrado público (1/4)', c.montoAlumbrado],
+                ['IGV proporcional al consumo', c.montoIgv],
+            ] as const;
+            conceptos.forEach(([etiqueta, valor], indice) => {
+                const filaY = y + 30 + indice * 24;
+                ctx.font = `500 14px ${fontBase}`;
+                ctx.fillStyle = colors.textMuted;
+                ctx.fillText(etiqueta, cardLeft + 25, filaY);
+                ctx.textAlign = 'right';
+                ctx.font = `600 14px ${fontBase}`;
+                ctx.fillStyle = colors.textMain;
+                ctx.fillText(valor === undefined ? 'Sin desglose guardado' : `S/ ${valor.toFixed(2)}`, cardLeft + innerWidth - 12, filaY);
+                ctx.textAlign = 'left';
+            });
+        }
+
         // Progress Bar Background
+        const barraY = y + (nuevoAcuerdo ? 96 : 12);
         ctx.fillStyle = colors.bg;
-        roundRect(ctx, cardLeft + 25, y + 12, innerWidth - 25, 6, 3);
+        roundRect(ctx, cardLeft + 25, barraY, innerWidth - 25, 6, 3);
         ctx.fill();
 
         // Progress Bar Fill
         ctx.fillStyle = colors.primary;
-        roundRect(ctx, cardLeft + 25, y + 12, (innerWidth - 25) * (pct / 100), 6, 3);
+        roundRect(ctx, cardLeft + 25, barraY, (innerWidth - 25) * (pct / 100), 6, 3);
         ctx.fill();
 
         y += rowHeight;

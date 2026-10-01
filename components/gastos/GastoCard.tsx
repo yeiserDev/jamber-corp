@@ -6,6 +6,8 @@ import { Gasto, Local } from "@/types/gasto";
 import { generarReporteImagen } from "@/utils/reportGenerator";
 import ModalComoSeCalcula from "./ModalComoSeCalcula";
 import ReciboDigital from "./ReciboDigital";
+import { METODO_LUZ } from '@/lib/billing/reglaLuz';
+import { generarReporteLuz } from '@/utils/reporteLuz';
 
 interface GastoCardProps {
   gasto: Gasto;
@@ -39,13 +41,14 @@ export default function GastoCard({
 }: GastoCardProps) {
   const isLuz = gasto.tipo === "luz";
   const unit  = isLuz ? "kWh" : "m³";
-  const costoPorUnidad = gasto.consumoTotal > 0 ? gasto.montoTotal / gasto.consumoTotal : 0;
+  const nuevoAcuerdo = isLuz && gasto.metodoCalculo === METODO_LUZ;
+  const costoPorUnidad = nuevoAcuerdo ? gasto.tarifaEnergia ?? 0 : gasto.consumoTotal > 0 ? gasto.montoTotal / gasto.consumoTotal : 0;
 
   const localesACobrar = gasto.costosPorLocal.filter(c => {
     const local = typeof c.localId === "string"
       ? locales.find(l => l._id === c.localId)
       : c.localId;
-    return local && local.tipo !== "casa";
+    return local && (nuevoAcuerdo || local.tipo !== "casa");
   });
 
 
@@ -84,7 +87,7 @@ export default function GastoCard({
         ? locales.find(l => l._id === costoPanaderia.localId)
         : costoPanaderia.localId)
     : undefined;
-  const mostrarExplicacion = isLuz && !!costoPanaderia;
+  const mostrarExplicacion = isLuz && !nuevoAcuerdo && !!costoPanaderia;
   const consumosOcupantes = gasto.costosPorLocal.map(costo => {
     const local = typeof costo.localId === "string"
       ? locales.find(item => item._id === costo.localId)
@@ -158,7 +161,8 @@ export default function GastoCard({
               const nombre = local?.nombre || "Local";
               const tipo   = local?.tipo   || "";
               const hex    = colorLocal(nombre, tipo);
-              const pct    = gasto.montoTotal > 0 ? (costo.monto / gasto.montoTotal) * 100 : 0;
+              const base = nuevoAcuerdo ? gasto.totalDistribuido ?? 0 : gasto.montoTotal;
+              const pct = base > 0 ? (costo.monto / base) * 100 : 0;
 
               return (
                 <div key={idx}>
@@ -178,6 +182,13 @@ export default function GastoCard({
                       </span>
                     </div>
                   </div>
+                  {nuevoAcuerdo && (
+                    <dl className="mb-3 grid grid-cols-1 gap-1 text-xs text-gray-600 tabular-nums">
+                      <div className="flex justify-between gap-2"><dt>Consumo de energía</dt><dd>S/ {costo.montoEnergia?.toFixed(2)}</dd></div>
+                      <div className="flex justify-between gap-2"><dt>Alumbrado público (1/4)</dt><dd>S/ {costo.montoAlumbrado?.toFixed(2)}</dd></div>
+                      <div className="flex justify-between gap-2"><dt>IGV según consumo</dt><dd>S/ {costo.montoIgv?.toFixed(2)}</dd></div>
+                    </dl>
+                  )}
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-1000 ease-out"
@@ -302,11 +313,18 @@ export default function GastoCard({
              <p className="text-[15px] font-bold text-gray-900 mt-0.5">{gasto.consumoTotal.toFixed(1)} {unit}</p>
            </div>
            <div>
-             <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Costo promedio</p>
+             <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">{nuevoAcuerdo ? 'Tarifa de energía' : 'Costo promedio'}</p>
              <p className="text-[15px] font-bold text-gray-900 mt-0.5">S/ {costoPorUnidad.toFixed(4)}/{unit}</p>
            </div>
         </div>
 
+        {nuevoAcuerdo && (
+          <p className="mb-3 text-xs leading-5 text-gray-600">
+            Alumbrado dividido entre academia, panadería, spa y casa. IGV del recibo proporcional a los kWh.
+            Total del recibo: S/ {gasto.montoTotal.toFixed(2)}. Repartido: S/ {gasto.totalDistribuido?.toFixed(2)}.
+            Diferencia fuera del reparto: S/ {gasto.diferenciaRecibo?.toFixed(2)} (incluye redondeos).
+          </p>
+        )}
         {mostrarExplicacion && (
           <div className="flex flex-col sm:flex-row gap-2 mb-2">
             <button
@@ -334,6 +352,13 @@ export default function GastoCard({
             <Download className="w-4 h-4" />
             Reporte
           </button>
+
+          {nuevoAcuerdo && (
+            <button onClick={e => { e.stopPropagation(); generarReporteLuz(gasto, locales, filtroLocal); }}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-[12px] transition-all">
+              <FileText className="w-4 h-4" /> PDF
+            </button>
+          )}
 
           {userRole === "admin" && (
             <>

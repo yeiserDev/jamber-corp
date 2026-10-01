@@ -5,6 +5,7 @@ import '@/lib/models/Local';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/jwt';
 import { BillingValidationError, calcularDistribucion } from '@/lib/billing/calcularDistribucion';
+import { METODO_LUZ } from '@/lib/billing/reglaLuz';
 
 // GET - Obtener todos los gastos
 export async function GET(request: Request) {
@@ -56,6 +57,10 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const { mes, tipo, consumoTotal, montoTotal, lecturas, cargoFijo, igv, otrosCargos } = body;
+    const { tarifaEnergia, alumbradoPublico } = body;
+    if (tipo === 'luz' && [tarifaEnergia, alumbradoPublico, igv].some(valor => typeof valor !== 'number' || !Number.isFinite(valor))) {
+      throw new BillingValidationError('Completa la tarifa de energía, el alumbrado público y el IGV del recibo');
+    }
 
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes) || !['luz', 'agua'].includes(tipo)) {
       throw new BillingValidationError('El periodo o el tipo de servicio no es válido');
@@ -63,9 +68,13 @@ export async function POST(request: Request) {
 
     // Calcular el consumo de cada medidor
     const Local = (await import('@/lib/models/Local')).default;
-    const todosLocales = await Local.find();
+    const todosLocales = await Local.find(tipo === 'luz' ? { estado: 'activo' } : {});
     const casaLocal = todosLocales.find((l: any) => l.tipo === 'casa');
     const calculo = calcularDistribucion({
+      metodoCalculo: tipo === 'luz' ? METODO_LUZ : 'proporcional-total',
+      tarifaEnergia,
+      alumbradoPublico,
+      localesReparto: todosLocales.map(l => ({ localId: l._id, tipo: l.tipo })),
       consumoTotal,
       montoTotal,
       cargoFijo,
@@ -77,6 +86,11 @@ export async function POST(request: Request) {
 
     // Crear el gasto
     const gasto = await Gasto.create({
+      metodoCalculo: calculo.metodoCalculo,
+      tarifaEnergia: calculo.tarifaEnergia,
+      alumbradoPublico: calculo.alumbradoPublico,
+      totalDistribuido: calculo.totalDistribuido,
+      diferenciaRecibo: calculo.diferenciaRecibo,
       mes,
       tipo,
       consumoTotal,

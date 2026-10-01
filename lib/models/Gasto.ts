@@ -15,6 +15,11 @@ export interface IGasto extends Document {
   // Datos del recibo total
   consumoTotal: number; // en kWh para luz, m3 para agua
   montoTotal: number; // costo total del recibo en soles
+  metodoCalculo?: string;
+  tarifaEnergia?: number;
+  alumbradoPublico?: number;
+  totalDistribuido?: number;
+  diferenciaRecibo?: number;
 
   // Costos fijos del recibo (IGV, cargo fijo, etc.)
   cargoFijo?: number;
@@ -29,6 +34,9 @@ export interface IGasto extends Document {
     localId: string;
     consumo: number;
     monto: number;
+    montoEnergia?: number;
+    montoAlumbrado?: number;
+    montoIgv?: number;
   }[];
 
   createdAt: Date;
@@ -58,6 +66,11 @@ const GastoSchema: Schema = new Schema(
       type: Number,
       default: 0,
     },
+    metodoCalculo: { type: String, enum: ['proporcional-total', 'consumo-alumbrado-igv-v1'] },
+    tarifaEnergia: Number,
+    alumbradoPublico: Number,
+    totalDistribuido: Number,
+    diferenciaRecibo: Number,
     igv: {
       type: Number,
       default: 0,
@@ -99,6 +112,9 @@ const GastoSchema: Schema = new Schema(
         },
         consumo: Number,
         monto: Number,
+        montoEnergia: Number,
+        montoAlumbrado: Number,
+        montoIgv: Number,
       },
     ],
   },
@@ -108,4 +124,8 @@ const GastoSchema: Schema = new Schema(
 // Índice compuesto para evitar duplicados de mes + tipo
 GastoSchema.index({ mes: 1, tipo: 1 }, { unique: true });
 
+// En desarrollo, un modelo cacheado anterior al acuerdo descartaba los campos nuevos.
+if (mongoose.models.Gasto && !mongoose.models.Gasto.schema.path('metodoCalculo')) {
+  mongoose.deleteModel('Gasto');
+}
 export default mongoose.models.Gasto || mongoose.model<IGasto>('Gasto', GastoSchema);

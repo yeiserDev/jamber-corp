@@ -1,4 +1,6 @@
 import { Gasto, Local } from "@/types/gasto";
+import { METODO_LUZ } from '@/lib/billing/reglaLuz';
+import { generarReporteLuz } from './reporteLuz';
 
 // Helper function for rounded rectangles
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
@@ -19,6 +21,10 @@ export const generarReporteProfesor = async (gasto: Gasto, todosGastos: Gasto[],
     // Encontrar el local del Profesor
     const profesorLocal = locales.find(l => l.tipo === 'profesor' || l.nombre.toLowerCase().includes('academia'));
     if (!profesorLocal) return;
+    if (gasto.tipo === 'luz' && gasto.metodoCalculo === METODO_LUZ) {
+        generarReporteLuz(gasto, locales, profesorLocal._id);
+        return;
+    }
 
     const profesorLocalId = profesorLocal._id;
 

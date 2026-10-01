@@ -1,3 +1,5 @@
+import { METODO_LUZ, calcularConceptosLuz } from './reglaLuz';
+
 export class BillingValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -13,6 +15,10 @@ type LecturaEntrada = {
 };
 
 type CalculoInput = {
+  metodoCalculo?: string;
+  tarifaEnergia?: unknown;
+  alumbradoPublico?: unknown;
+  localesReparto?: { localId: unknown; tipo: string }[];
   consumoTotal: unknown;
   montoTotal: unknown;
   cargoFijo?: unknown;
@@ -36,23 +42,30 @@ const redondear = (valor: number, decimales = 2) => {
 };
 
 /**
- * Distribuye el total facturado del periodo entre los consumos medidos.
- * Los conceptos desglosados del recibo ya deben estar incluidos en montoTotal;
- * no se suman otra vez para evitar cobros duplicados.
+ * Luz: energía, alumbrado / 4 e IGV proporcional al consumo.
+ * Agua e históricos: distribución proporcional del total facturado.
  */
 export function calcularDistribucion({
+  metodoCalculo,
+  tarifaEnergia: tarifaEntrada,
+  alumbradoPublico: alumbradoEntrada,
+  localesReparto = [],
   consumoTotal: consumoTotalEntrada,
   montoTotal: montoTotalEntrada,
   cargoFijo: cargoFijoEntrada = 0,
-  igv: igvEntrada = 0,
+  igv: igvEntrada,
   otrosCargos: otrosCargosEntrada = 0,
   lecturas,
   casaLocalId,
 }: CalculoInput) {
+  if (metodoCalculo === METODO_LUZ
+      && [tarifaEntrada, alumbradoEntrada, igvEntrada].some(valor => typeof valor !== 'number' || !Number.isFinite(valor))) {
+    throw new BillingValidationError('Completa la tarifa de energía, el alumbrado público y el IGV del recibo');
+  }
   const consumoTotal = numeroValido(consumoTotalEntrada, "El consumo total");
   const montoTotal = numeroValido(montoTotalEntrada, "El monto total");
   const cargoFijo = numeroValido(cargoFijoEntrada, "El cargo fijo");
-  const igv = numeroValido(igvEntrada, "El IGV");
+  const igv = numeroValido(igvEntrada ?? 0, "El IGV");
   const otrosCargos = numeroValido(otrosCargosEntrada, "Los otros cargos");
 
   if (consumoTotal <= 0) throw new BillingValidationError("El consumo total debe ser mayor a cero");
@@ -116,6 +129,45 @@ export function calcularDistribucion({
     throw new BillingValidationError("Existe consumo sin asignar, pero no se encontró el local Residencia");
   }
 
+  if (metodoCalculo === METODO_LUZ) {
+    const tarifaEnergia = numeroValido(tarifaEntrada, "La tarifa de energía");
+    const alumbradoPublico = numeroValido(alumbradoEntrada, "El alumbrado público");
+    if (tarifaEnergia <= 0) {
+      throw new BillingValidationError("Completa la tarifa de energía y el IGV del recibo");
+    }
+    // Los registros existentes usan tanto "academia" como el tipo histórico "profesor".
+    const tipoOcupante = (tipo: string) => tipo === 'profesor' ? 'academia' : tipo;
+    const tipos = ['academia', 'panaderia', 'spa', 'casa'];
+    const ids = localesReparto.map(local => String(local.localId));
+    if (localesReparto.length !== 4 || new Set(ids).size !== 4
+        || tipos.some(tipo => localesReparto.filter(local => tipoOcupante(local.tipo) === tipo).length !== 1)
+        || !localesReparto.some(local => local.tipo === 'casa' && String(local.localId) === String(casaLocalId))) {
+      throw new BillingValidationError("El reparto requiere academia, panadería, spa y casa, una vez cada uno");
+    }
+    if (lecturasConConsumo.some(lectura => !ids.includes(lectura.localId) || lectura.localId === String(casaLocalId))) {
+      throw new BillingValidationError("Registra lecturas solo para academia, panadería y spa; casa se obtiene por diferencia");
+    }
+    if (localesReparto.some(local => local.tipo !== 'casa' && !consumoPorLocal.has(String(local.localId)))) {
+      throw new BillingValidationError("Completa las lecturas de academia, panadería y spa, incluso si su consumo es cero");
+    }
+    if (redondear(consumoTotal * tarifaEnergia + alumbradoPublico + igv) > montoTotal + 0.02) {
+      throw new BillingValidationError("La energía, el alumbrado y el IGV superan el total del recibo; revisa los importes");
+    }
+    const costosPorLocal = localesReparto.map(local => {
+      const localId = String(local.localId);
+      const consumo = consumoPorLocal.get(localId) || 0;
+      return { localId, consumo, ...calcularConceptosLuz({ consumo, consumoTotal, tarifaEnergia, alumbradoPublico, igv }) };
+    });
+    const totalDistribuido = redondear(costosPorLocal.reduce((suma, costo) => suma + costo.monto, 0));
+    return {
+      consumoTotal, montoTotal, cargoFijo, igv, otrosCargos,
+      metodoCalculo: METODO_LUZ, tarifaEnergia, alumbradoPublico,
+      totalDistribuido, diferenciaRecibo: redondear(montoTotal - totalDistribuido),
+      lecturasConConsumo, consumoTotalLocales, consumoCasa,
+      costoPorUnidad: tarifaEnergia, costosPorLocal,
+    };
+  }
+
   const costoPorUnidad = montoTotal / consumoTotal;
   const costosPorLocal = Array.from(consumoPorLocal, ([localId, consumo]) => ({
     localId,
@@ -140,6 +192,11 @@ export function calcularDistribucion({
   }
 
   return {
+    metodoCalculo: 'proporcional-total',
+    tarifaEnergia: undefined,
+    alumbradoPublico: undefined,
+    totalDistribuido: montoTotal,
+    diferenciaRecibo: 0,
     consumoTotal,
     montoTotal,
     cargoFijo,

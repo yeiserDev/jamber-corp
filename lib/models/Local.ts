@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ILocal extends Document {
   nombre: string;
-  tipo: 'panaderia' | 'spa' | 'profesor' | 'casa';
+  tipo: 'panaderia' | 'spa' | 'profesor' | 'academia' | 'casa';
   direccion: string;
   estado: 'activo' | 'inactivo';
   createdAt: Date;
@@ -18,7 +18,7 @@ const LocalSchema: Schema = new Schema(
     },
     tipo: {
       type: String,
-      enum: ['panaderia', 'spa', 'profesor', 'casa'],
+      enum: ['panaderia', 'spa', 'profesor', 'academia', 'casa'],
       required: true,
     },
     direccion: {

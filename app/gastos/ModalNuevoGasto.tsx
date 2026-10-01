@@ -4,6 +4,7 @@ import { AlertTriangle, LockKeyhole, X, Zap, Droplets, Home } from "lucide-react
 import { Local } from "@/types/gasto";
 import React from "react";
 import toast from "react-hot-toast";
+import { calcularConceptosLuz } from '@/lib/billing/reglaLuz';
 
 interface ModalNuevoGastoProps {
   showNuevoGasto: boolean;
@@ -23,6 +24,10 @@ interface ModalNuevoGastoProps {
   cargoFijo: string;
   setCargoFijo: (cargo: string) => void;
   igv: string;
+  tarifaEnergia: string;
+  setTarifaEnergia: (valor: string) => void;
+  alumbradoPublico: string;
+  setAlumbradoPublico: (valor: string) => void;
   setIgv: (igv: string) => void;
   otrosCargos: string;
   setOtrosCargos: (otros: string) => void;
@@ -69,6 +74,10 @@ const ModalNuevoGasto = React.memo(
     cargoFijo,
     setCargoFijo,
     igv,
+    tarifaEnergia,
+    setTarifaEnergia,
+    alumbradoPublico,
+    setAlumbradoPublico,
     setIgv,
     otrosCargos,
     setOtrosCargos,
@@ -90,12 +99,14 @@ const ModalNuevoGasto = React.memo(
             return total + Math.max(0, Number(lectura.lecturaActual) - Number(lectura.lecturaAnterior));
           }, 0)
       : 0;
-    const precioEfectivo = Number(consumoTotal) > 0
-      ? Number(montoTotal) / Number(consumoTotal)
-      : 0;
-    const montoPanaderia = Math.round(
-      (consumoPanaderia * precioEfectivo + Number.EPSILON) * 100
-    ) / 100;
+    const precioEfectivo = Number(tarifaEnergia);
+    const detallePanaderia = Number(consumoTotal) > 0 && precioEfectivo > 0
+      && [Number(consumoTotal), precioEfectivo, Number(alumbradoPublico), Number(igv), consumoPanaderia].every(Number.isFinite)
+      && consumoPanaderia <= Number(consumoTotal) && alumbradoPublico !== '' && igv !== ''
+      && Number(alumbradoPublico) >= 0 && Number(igv) >= 0
+      ? calcularConceptosLuz({ consumo: consumoPanaderia, consumoTotal: Number(consumoTotal),
+          tarifaEnergia: precioEfectivo, alumbradoPublico: Number(alumbradoPublico), igv: Number(igv) })
+      : null;
 
     if (!showNuevoGasto) return null;
 
@@ -311,7 +322,29 @@ const ModalNuevoGasto = React.memo(
                     </div>
                   </div>
 
-                  {/* Cargos adicionales — colapsados visualmente */}
+                  {tipo === 'luz' && (
+                    <section className="space-y-3" aria-label="Conceptos para el reparto de luz">
+                      <p className="text-sm text-gray-600">Energía según consumo, alumbrado entre cuatro e IGV del recibo según consumo.</p>
+                      {gastoEditando && <p className="text-sm text-gray-600">Al guardar se recalculará este periodo con los tres conceptos del acuerdo.</p>}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label htmlFor="tarifa-energia" className={labelCls}>Tarifa de energía (S/ por kWh)</label>
+                          <input id="tarifa-energia" type="number" min="0.000001" step="any" required value={tarifaEnergia} onChange={e => setTarifaEnergia(e.target.value)} className={inputCls} placeholder="0.6234" />
+                        </div>
+                        <div>
+                          <label htmlFor="alumbrado-publico" className={labelCls}>Alumbrado del recibo (S/)</label>
+                          <input id="alumbrado-publico" type="number" min="0" step="0.01" required value={alumbradoPublico} onChange={e => setAlumbradoPublico(e.target.value)} className={inputCls} placeholder="35.20" />
+                        </div>
+                        <div>
+                          <label htmlFor="igv-recibo" className={labelCls}>IGV del recibo (S/)</label>
+                          <input id="igv-recibo" type="number" min="0" step="0.01" required value={igv} onChange={e => setIgv(e.target.value)} className={inputCls} placeholder="86.47" />
+                        </div>
+                      </div>
+                      <p className="text-xs leading-5 text-gray-600">Copia la tarifa de energía y los importes del recibo. Academia, panadería, spa y casa pagan cada uno el 25 % del alumbrado, incluso con consumo cero. Los demás cargos quedan fuera del reparto.</p>
+                    </section>
+                  )}
+
+                  {tipo === 'agua' && (
                   <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3">
                     <div>
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -376,6 +409,7 @@ const ModalNuevoGasto = React.memo(
                       </div>
                     </div>
                   </div>
+                  )}
                 </div>
               )}
 
@@ -536,13 +570,13 @@ const ModalNuevoGasto = React.memo(
                     })}
                   </div>
 
-                  {tipo === "luz" && precioEfectivo > 0 && (
+                  {tipo === "luz" && detallePanaderia && (
                     <section className="rounded-2xl bg-[#0A2640] p-4 text-white" aria-label="Vista previa del cálculo de Panadería">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <h3 className="text-sm font-semibold">Cálculo de Panadería</h3>
                           <p className="mt-1 text-xs leading-5 text-blue-100">
-                            Precio efectivo con IGV, cargo fijo y demás conceptos incluidos en el total final.
+                            Consumo + un cuarto del alumbrado + IGV proporcional al consumo.
                           </p>
                         </div>
                         <span className="shrink-0 rounded-lg bg-white/10 px-2.5 py-1 text-xs font-semibold tabular-nums">
@@ -551,13 +585,10 @@ const ModalNuevoGasto = React.memo(
                       </div>
 
                       <div className="mt-4 flex flex-wrap items-baseline gap-2 border-t border-white/15 pt-4 tabular-nums">
-                        {consumoPanaderia > 0 ? (
+                        {panaderia && lecturas.filter(l => l.localId === panaderia._id).every(l => l.lecturaAnterior !== '' && l.lecturaActual !== '') ? (
                           <>
-                            <span className="text-sm font-semibold">{consumoPanaderia.toFixed(2)} kWh</span>
-                            <span className="text-blue-200">×</span>
-                            <span className="text-sm font-semibold">S/ {precioEfectivo.toFixed(4)}</span>
-                            <span className="text-blue-200">=</span>
-                            <strong className="text-xl">S/ {montoPanaderia.toFixed(2)}</strong>
+                            <span className="text-sm">Consumo S/ {detallePanaderia.montoEnergia.toFixed(2)} + alumbrado S/ {detallePanaderia.montoAlumbrado.toFixed(2)} + IGV S/ {detallePanaderia.montoIgv.toFixed(2)} =</span>
+                            <strong className="text-xl">S/ {detallePanaderia.monto.toFixed(2)}</strong>
                           </>
                         ) : (
                           <span className="text-sm text-blue-100">
@@ -607,6 +638,10 @@ const ModalNuevoGasto = React.memo(
                   onClick={() => {
                     if (!mes || !consumoTotal || !montoTotal) {
                       toast.error("Completa todos los campos obligatorios");
+                      return;
+                    }
+                    if (tipo === 'luz' && (![Number(tarifaEnergia), Number(alumbradoPublico), Number(igv)].every(Number.isFinite) || Number(tarifaEnergia) <= 0 || alumbradoPublico === '' || igv === '' || Number(alumbradoPublico) < 0 || Number(igv) < 0)) {
+                      toast.error('Completa la tarifa de energía, el alumbrado público y el IGV del recibo');
                       return;
                     }
                     setIsTransitioning(true);

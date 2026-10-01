@@ -1,4 +1,6 @@
 const { jsPDF } = require("jspdf");
+const { crearReporteAcuerdoLuzPdf } = require('./reporteAcuerdoLuzPdf');
+const { METODO_LUZ } = require('../lib/billing/reglaLuz');
 
 /**
  * @typedef {Object} DesgloseLuz
@@ -16,6 +18,7 @@ const { jsPDF } = require("jspdf");
 
 /**
  * @typedef {Object} DatosReportePanaderia
+ * @property {string=} metodoCalculo
  * @property {string} nombreLocal
  * @property {string} etiquetaMes
  * @property {string} periodo
@@ -35,6 +38,7 @@ const numero = (valor, decimales = 2) => valor.toFixed(decimales);
 
 /** @param {DatosReportePanaderia} datos */
 function crearReportePanaderiaPdf(datos) {
+  if (datos.metodoCalculo === METODO_LUZ) return crearReporteAcuerdoLuzPdf(datos);
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const ancho = 210;
   const alto = 297;

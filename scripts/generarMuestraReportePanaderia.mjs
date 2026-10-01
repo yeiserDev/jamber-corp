@@ -9,6 +9,7 @@ const salida = resolve("output/pdf/reporte-luz-panaderia-agosto-2026.pdf");
 mkdirSync(dirname(salida), { recursive: true });
 
 const documento = crearReportePanaderiaPdf({
+  metodoCalculo: 'consumo-alumbrado-igv-v1',
   nombreLocal: "Panaderia",
   etiquetaMes: "Agosto 2026",
   periodo: "16 jul al 17 ago 2026",

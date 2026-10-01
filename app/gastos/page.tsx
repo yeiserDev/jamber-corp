@@ -94,6 +94,8 @@ export default function GastosPage() {
   const [cargoFijo,    setCargoFijo]    = useState("");
   const [igv,          setIgv]          = useState("");
   const [otrosCargos,  setOtrosCargos]  = useState("");
+  const [tarifaEnergia, setTarifaEnergia] = useState("");
+  const [alumbradoPublico, setAlumbradoPublico] = useState("");
   const [lecturas,     setLecturas]     = useState<LecturaFormulario[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuth, setIsAuth] = useState(false);
@@ -151,6 +153,9 @@ export default function GastosPage() {
   const handleSubmitGasto = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pasoModal < 2) return;
+    if (tipo === 'luz' && (!tarifaEnergia || Number(tarifaEnergia) <= 0 || alumbradoPublico === '' || igv === '')) {
+      toast.error('Completa la tarifa de energía, el alumbrado público y el IGV del recibo'); return;
+    }
     if (!mes || !consumoTotal || !montoTotal || lecturas.length === 0) {
       toast.error("Completa todos los campos obligatorios"); return;
     }
@@ -182,7 +187,7 @@ export default function GastosPage() {
       const res    = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mes, tipo, consumoTotal: parseFloat(consumoTotal), montoTotal: parseFloat(montoTotal), cargoFijo: cargoFijo ? parseFloat(cargoFijo) : 0, igv: igv ? parseFloat(igv) : 0, otrosCargos: otrosCargos ? parseFloat(otrosCargos) : 0, lecturas: lecturasNormalizadas }),
+        body: JSON.stringify({ mes, tipo, consumoTotal: parseFloat(consumoTotal), montoTotal: parseFloat(montoTotal), tarifaEnergia: tipo === 'luz' ? Number(tarifaEnergia) : undefined, alumbradoPublico: tipo === 'luz' ? Number(alumbradoPublico) : undefined, cargoFijo: cargoFijo ? parseFloat(cargoFijo) : 0, igv: igv ? parseFloat(igv) : 0, otrosCargos: otrosCargos ? parseFloat(otrosCargos) : 0, lecturas: lecturasNormalizadas }),
       });
       const data = await res.json();
       toast.dismiss(t);
@@ -206,6 +211,8 @@ export default function GastosPage() {
     setCargoFijo(gasto.cargoFijo?.toString() || "");
     setIgv(gasto.igv?.toString() || "");
     setOtrosCargos(gasto.otrosCargos?.toString() || "");
+    setTarifaEnergia(gasto.tarifaEnergia?.toString() ?? "");
+    setAlumbradoPublico(gasto.alumbradoPublico?.toString() ?? "");
     const lForm = gasto.lecturas
       .filter(l => {
         const local = typeof l.localId === "string" ? locales.find(loc => loc._id === l.localId) : l.localId;
@@ -235,6 +242,7 @@ export default function GastosPage() {
   const confirmarEliminar = (id: string) => { setGastoAEliminar(id); setShowDeleteConfirm(true); };
 
   const resetForm = () => {
+    setTarifaEnergia(""); setAlumbradoPublico("");
     setMes(""); setTipo("luz"); setConsumoTotal(""); setMontoTotal("");
     setCargoFijo(""); setIgv(""); setOtrosCargos(""); setGastoEditando(null); setPasoModal(1);
     const conMedidor = locales.filter(l => l.tipo !== "casa");
@@ -965,6 +973,10 @@ export default function GastosPage() {
         cargoFijo={cargoFijo}
         setCargoFijo={setCargoFijo}
         igv={igv}
+        tarifaEnergia={tarifaEnergia}
+        setTarifaEnergia={setTarifaEnergia}
+        alumbradoPublico={alumbradoPublico}
+        setAlumbradoPublico={setAlumbradoPublico}
         setIgv={setIgv}
         otrosCargos={otrosCargos}
         setOtrosCargos={setOtrosCargos}
